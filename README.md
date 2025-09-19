@@ -40,29 +40,17 @@ The complete benchmark is available for download at our [HF repository](https://
 
 ## 👍 Acknowledgement
 
-- Our work is built upon the 
+- Our work is built upon the [LLaVA-1.5](https://github.com/haotian-liu/LLaVA) architecture.
 
-  [LLaVA-1.5](https://github.com/haotian-liu/LLaVA) architecture.
-
-- We thank the creators of the visual encoders used as experts in our model: 
-
-  [CLIP](https://github.com/openai/CLIP), [ConvNext](https://github.com/facebookresearch/ConvNeXt), [DINOv2](https://github.com/facebookresearch/dinov2), [EVA-02](https://github.com/baaivision/EVA), [SAM](https://github.com/facebookresearch/segment-anything), and [Vary](https://github.com/Ucas-HaoranWei/Vary).
+- We thank the creators of the visual encoders used as experts in our model: [CLIP](https://github.com/openai/CLIP), [ConvNext](https://github.com/facebookresearch/ConvNeXt), [DINOv2](https://github.com/facebookresearch/dinov2), [EVA-02](https://github.com/baaivision/EVA), [SAM](https://github.com/facebookresearch/segment-anything), and [Vary](https://github.com/Ucas-HaoranWei/Vary).
 
 ## 🔒 License
 
-
-
 - The majority of this project is released under the Apache 2.0 license as found in the `LICENSE` file.
-
-
 
 ## ✏️ Citation
 
-
-
 If you find our paper and code useful in your research, please consider giving a star ⭐ and citation ✏️.
-
-代码段
 
 ```latex
 @article{wang2025visionweaver,
