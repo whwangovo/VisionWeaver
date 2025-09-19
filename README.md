@@ -51,7 +51,6 @@ The complete benchmark is available for download at our [HF repository](https://
 ## ✏️ Citation
 
 If you find our paper and code useful in your research, please consider giving a star ⭐ and citation ✏️.
-
 ```latex
 @article{wang2025visionweaver,
   title={Diving into Mitigating Hallucinations from a Vision Perspective for Large Vision-Language Models},
