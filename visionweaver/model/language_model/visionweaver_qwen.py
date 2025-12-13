@@ -28,7 +28,7 @@ from transformers.generation.utils import GenerateOutput
 from transformers.modeling_outputs import CausalLMOutputWithPast
 
 # from ...constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
-from VisionWeaver.model.visionweaver_arch import (
+from visionweaver.model.visionweaver_arch import (
     VisionWeaverMetaForCausalLM,
     VisionWeaverMetaModel,
 )

@@ -1,7 +1,7 @@
 import torch
 import transformers
 
-from VisionWeaver.model import VisionWeaverLlamaForCausalLM, VisionWeaverQwenForCausalLM
+from visionweaver.model import VisionWeaverLlamaForCausalLM, VisionWeaverQwenForCausalLM
 
 
 def get_model(model_args, training_args):
