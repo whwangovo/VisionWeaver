@@ -1,0 +1,51 @@
+# Python
+__pycache__
+*.pyc
+*.egg-info
+dist
+
+# Jupyter
+.ipynb_checkpoints
+*.ipynb
+
+# Logs and WandB
+*.log
+*.log.*
+wandb
+
+# Data
+*.json
+*.jsonl
+!**/alpaca-data-conversation.json
+**temp_data**
+
+# Editors and OS
+.idea
+.vscode
+*.swp
+.DS_Store
+
+# Checkpoints and Outputs
+checkpoints
+ckpts*
+output
+outputs
+**outputs**
+serve_images/
+images
+
+# Project Specific
+playground
+lmms
+notebooks
+tests
+analyze
+illusion
+img
+inference
+train_scripts
+train_dromo.py
+llava
+
+# DevContainer
+!.devcontainer/*
