@@ -6,8 +6,8 @@ import torch.nn.functional as F
 from torch import nn
 from transformers.utils import logging
 
-from llava.model.multimodal_encoder.clip_encoder import CLIPVisionTower
-from llava.utils import rank0_print
+from visionweaver.model.multimodal_encoder.clip_encoder import CLIPVisionTower
+from visionweaver.utils import rank0_print
 
 from .visionweaver_experts import VisionExperts
 

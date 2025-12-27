@@ -350,7 +350,7 @@ def train():
         print_trainable_params(model)
         # print_config(model.config)
 
-    trainer = LLaVATrainer(
+    trainer = VisionWeaverTrainer(
         model=model, tokenizer=tokenizer, args=training_args, **data_module
     )
 

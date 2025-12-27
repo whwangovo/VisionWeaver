@@ -7,7 +7,7 @@ from PIL import Image
 from torch import nn
 from transformers import CLIPImageProcessor
 
-from llava.model.multimodal_encoder.vision_models.eva_vit import build_eva_vit
+from visionweaver.model.multimodal_encoder.vision_models.eva_vit import build_eva_vit
 
 
 class EVAVisionTower(nn.Module):

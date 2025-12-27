@@ -21,12 +21,12 @@ import torch
 from peft import PeftModel
 from transformers import AutoConfig, AutoTokenizer, BitsAndBytesConfig
 
-from llava.constants import (
+from visionweaver.constants import (
     DEFAULT_IM_END_TOKEN,
     DEFAULT_IM_START_TOKEN,
     DEFAULT_IMAGE_PATCH_TOKEN,
 )
-from llava.utils import rank0_print
+from visionweaver.utils import rank0_print
 
 from . import *
 

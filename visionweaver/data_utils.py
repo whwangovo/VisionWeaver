@@ -11,17 +11,17 @@ from packaging import version
 from PIL import Image
 from torch.utils.data import Dataset
 
-from llava import conversation as conversation_lib
-from llava.args_utils import DataArguments
-from llava.constants import (
+from visionweaver import conversation as conversation_lib
+from visionweaver.args_utils import DataArguments
+from visionweaver.constants import (
     DEFAULT_IM_END_TOKEN,
     DEFAULT_IM_START_TOKEN,
     DEFAULT_IMAGE_TOKEN,
     IGNORE_INDEX,
     IMAGE_TOKEN_INDEX,
 )
-from llava.mm_utils import tokenizer_image_token
-from llava.utils import rank0_print
+from visionweaver.mm_utils import tokenizer_image_token
+from visionweaver.utils import rank0_print
 
 IS_TOKENIZER_GREATER_THAN_0_14 = version.parse(tokenizers.__version__) >= version.parse(
     "0.14"

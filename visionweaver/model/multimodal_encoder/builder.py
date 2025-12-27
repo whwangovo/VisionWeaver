@@ -1,4 +1,4 @@
-from llava.utils import rank0_print
+from visionweaver.utils import rank0_print
 
 from .clip_encoder import CLIPVisionTower
 from .convnext_encoder import ConvNextVisionTower

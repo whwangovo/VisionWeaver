@@ -49,3 +49,6 @@ llava
 
 # DevContainer
 !.devcontainer/*
+# pixi environments
+.pixi/*
+!.pixi/config.toml

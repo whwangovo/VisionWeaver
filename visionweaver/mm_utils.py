@@ -7,8 +7,8 @@ import torch
 from PIL import Image
 from transformers import StoppingCriteria
 
-from llava.constants import IMAGE_TOKEN_INDEX
-from llava.utils import rank0_print
+from visionweaver.constants import IMAGE_TOKEN_INDEX
+from visionweaver.utils import rank0_print
 
 
 def select_best_resolution(original_size, possible_resolutions):

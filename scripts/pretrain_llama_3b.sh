@@ -3,7 +3,7 @@ export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 export WANDB_PROJECT="hallucination"
 
 MODEL_PATH=checkpoints/Llama-3.2-3B-Instruct
-DATA_PATH=playground/LLaVA-Pretrain
+DATA_PATH=mock/LLaVA-Pretrain
 VISION_TOWER="convnext;eva;sam;vary;dino"
 
 LLM_VERSION_CLEAN="llama3"
