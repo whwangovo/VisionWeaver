@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 from typing import Optional
 
+from hydra import compose, initialize_config_dir
+from hydra.core.global_hydra import GlobalHydra
 from omegaconf import DictConfig, OmegaConf
 
 _CONFIG: Optional[DictConfig] = None
@@ -26,7 +28,16 @@ def _default_config_path() -> str:
 def load_config(path: Optional[str] = None) -> DictConfig:
     global _CONFIG
     config_path = path or _default_config_path()
-    _CONFIG = OmegaConf.load(config_path)
+    cfg = OmegaConf.load(config_path)
+    if "defaults" in cfg:
+        config_dir = str(Path(config_path).parent)
+        config_name = Path(config_path).stem
+        if GlobalHydra.instance().is_initialized():
+            cfg = compose(config_name=config_name)
+        else:
+            with initialize_config_dir(version_base=None, config_dir=config_dir):
+                cfg = compose(config_name=config_name)
+    _CONFIG = cfg
     return _CONFIG
 
 

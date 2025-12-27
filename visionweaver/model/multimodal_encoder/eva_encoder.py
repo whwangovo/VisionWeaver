@@ -22,7 +22,9 @@ class EVAVisionTower(nn.Module):
         self.freeze_vision = args.freeze_vision_tower
 
         self.input_image_size = args.input_image_size
-        self.input_image_tokens = 576
+        self.input_image_tokens = (
+            self.input_image_size // args.patch_size
+        ) ** 2
         # self.vision_tower.config = vision_tower_config
 
         self.load_model()
@@ -43,7 +45,10 @@ class EVAVisionTower(nn.Module):
         #                                     image_std=[0.26862954, 0.26130258, 0.27577711])
 
         # load weights
-        self.image_processor = CLIPImageProcessor.from_pretrained("openai/clip-vit-large-patch14-336")
+        image_processor_name = getattr(self.args, "vision_image_processor", None)
+        if not image_processor_name:
+            raise ValueError("vision_image_processor must be set in the config.")
+        self.image_processor = CLIPImageProcessor.from_pretrained(image_processor_name)
         self.vision_tower, self.config = build_eva_vit(model_name=self.vision_tower_name, image_size=self.input_image_size)
         self.load_vision_checkpoint()
         # self.vision_tower.config = vision_tower_config

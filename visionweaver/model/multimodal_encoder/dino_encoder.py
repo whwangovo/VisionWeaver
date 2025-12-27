@@ -14,6 +14,7 @@ class DINOVisionTower(nn.Module):
 
 
         self.is_loaded = False
+        self.args = args
 
         self.vision_tower_name = vision_tower
         self.select_layer = args.mm_vision_select_layer
@@ -34,8 +35,10 @@ class DINOVisionTower(nn.Module):
             print('{} is already loaded, `load_model` called again, skipping.'.format(self.vision_tower_name))
             return
         
-        self.image_processor = CLIPImageProcessor.from_pretrained("openai/clip-vit-large-patch14-336")
-        # self.clip_vision_tower = CLIPVisionModel.from_pretrained("openai/clip-vit-large-patch14-336")
+        image_processor_name = getattr(self.args, "vision_image_processor", None)
+        if not image_processor_name:
+            raise ValueError("vision_image_processor must be set in the config.")
+        self.image_processor = CLIPImageProcessor.from_pretrained(image_processor_name)
         self.vision_tower = Dinov2Model.from_pretrained(self.vision_tower_name)
 
         if self.freeze_vision:
@@ -95,5 +98,11 @@ class DINOVisionTower(nn.Module):
 
     @property
     def num_patches(self):
-        #return (self.config.image_size // self.config.patch_size) ** 2
-        return 256
+        image_size = getattr(self.config, "image_size", None)
+        patch_size = getattr(self.config, "patch_size", None)
+        if image_size and patch_size:
+            return (image_size // patch_size) ** 2
+        num_patches = getattr(self.args, "dino_num_patches", None)
+        if num_patches is None:
+            raise ValueError("dino_num_patches must be set in the config.")
+        return num_patches

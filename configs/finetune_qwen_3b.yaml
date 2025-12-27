@@ -8,7 +8,7 @@ model:
   version: "llava_llama_3"
   pretrain_mm_mlp_adapter: "outputs/pretrain_outputs/dromo-ccesvd-llama3-v4-pretrain/mm_projector.bin"
   mm_projector_type: "mlp2x_gelu"
-  mm_tunable_parts: "dromo_stage_2"
+  mm_tunable_parts: "finetune"
   mm_vision_select_layer: -2
   mm_vision_select_feature: "cls_patch"
   mm_use_im_start_end: false

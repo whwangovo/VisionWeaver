@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from copy import deepcopy
 
 import torch
@@ -17,12 +18,20 @@ class VisionExperts(nn.Module):
         super().__init__()
 
         self.is_loaded = False
-        self.input_image_size = getattr(config, "image_size", 336)
-        self.patch_size = getattr(config, "patch_size", 14)
+        self.input_image_size = getattr(config, "image_size", None)
+        if self.input_image_size is None:
+            raise ValueError("image_size must be set in the config.")
+        self.patch_size = getattr(config, "patch_size", None)
+        if self.patch_size is None:
+            raise ValueError("patch_size must be set in the config.")
         self.num_grids = self.input_image_size // self.patch_size
         self.num_tokens = self.num_grids**2
-        self.hidden_size = getattr(config, "mm_hidden_size", 1024)
-        self.freeze_vision = getattr(config, "freeze_vision_tower", True)
+        self.hidden_size = getattr(config, "mm_hidden_size", None)
+        if self.hidden_size is None:
+            raise ValueError("mm_hidden_size must be set in the config.")
+        self.freeze_vision = getattr(config, "freeze_vision_tower", None)
+        if self.freeze_vision is None:
+            raise ValueError("freeze_vision_tower must be set in the config.")
 
         vision_tower_name_list = getattr(
             config, "mm_vision_tower", getattr(config, "vision_tower", None)
@@ -39,52 +48,48 @@ class VisionExperts(nn.Module):
         self.vision_experts = nn.ModuleList()
         self.expert_projectors = nn.ModuleList()
 
-        expert_registry = {
-            "eva": {
-                "cls": EVAVisionTower,
-                "path": "checkpoints/EVA-02/eva02/det/eva02_L_coco_det_sys_o365.pth",
-                "args": {},
-            },
-            "convnext": {
-                "cls": ConvNextVisionTower,
-                "path": "convnext_xxlarge.clip_laion2b_soup",
-                "args": {},
-            },
-            "sam": {
-                "cls": SAMVisionTower,
-                "path": "facebook/sam-vit-large",
-                "args": {},
-            },
-            "pix2struct": {
-                "cls": Pix2StructVisionTower,
-                "path": "google/pix2struct-large",
-                "args": {"do_resize": True, "de_normalize": True},
-            },
-            "vary": {
-                "cls": VaryVisionTower,
-                "path": "checkpoints/Vary-toy",
-                "args": {},
-            },
-            "dino": {
-                "cls": DINOVisionTower,
-                "path": "facebook/dinov2-large",
-                "args": {"mm_vision_select_layer": -2},
-            },
+        expert_classes = {
+            "eva": EVAVisionTower,
+            "convnext": ConvNextVisionTower,
+            "sam": SAMVisionTower,
+            "pix2struct": Pix2StructVisionTower,
+            "vary": VaryVisionTower,
+            "dino": DINOVisionTower,
         }
+        expert_registry = getattr(config, "vision_expert_registry", None)
+        if expert_registry is None:
+            raise ValueError(
+                "vision_expert_registry is required for expert initialization."
+            )
+        if not isinstance(expert_registry, Mapping):
+            raise TypeError("vision_expert_registry must be a mapping of expert configs.")
 
         for name in vision_tower_name_list:
-            if name not in expert_registry:
+            expert_cls = expert_classes.get(name)
+            if expert_cls is None:
                 raise NotImplementedError(f"Expert {name} is not implemented.")
 
-            expert_info = expert_registry[name]
+            expert_info = expert_registry.get(name)
+            if expert_info is None:
+                raise ValueError(f"Missing expert config for '{name}'.")
+            if not isinstance(expert_info, Mapping):
+                raise TypeError(f"Expert config for '{name}' must be a mapping.")
+
+            expert_path = expert_info.get("path")
+            if not expert_path:
+                raise ValueError(f"Expert '{name}' must define a non-empty path.")
+            expert_args_map = expert_info.get("args") or {}
+            if not isinstance(expert_args_map, Mapping):
+                raise TypeError(f"Expert '{name}' args must be a mapping.")
+
             expert_args = deepcopy(config)
             expert_args.input_image_size = self.input_image_size
             expert_args.freeze_vision = self.freeze_vision
 
-            for k, v in expert_info["args"].items():
+            for k, v in expert_args_map.items():
                 setattr(expert_args, k, v)
 
-            vision_tower = expert_info["cls"](expert_info["path"], expert_args)
+            vision_tower = expert_cls(expert_path, expert_args)
             expert_projector = nn.Linear(vision_tower.hidden_size, self.hidden_size)
 
             self.vision_experts.append(vision_tower)

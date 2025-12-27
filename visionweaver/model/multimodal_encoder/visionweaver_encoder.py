@@ -19,9 +19,10 @@ class VisionTower(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
-        self.base_vision_tower = CLIPVisionTower(
-            "openai/clip-vit-large-patch14-336", config
-        )
+        base_vision_tower = getattr(config, "base_vision_tower", None)
+        if not base_vision_tower:
+            raise ValueError("base_vision_tower must be set in the config.")
+        self.base_vision_tower = CLIPVisionTower(base_vision_tower, config)
 
         experts_config = copy.deepcopy(config)
         experts_config.mm_hidden_size = self.hidden_size

@@ -12,6 +12,7 @@ class ConvNextVisionTower(nn.Module):
         super().__init__()
 
         self.is_loaded = False
+        self.args = args
         
         self.vision_tower_name = vision_tower
         self.select_layer = args.mm_vision_select_layer
@@ -37,7 +38,10 @@ class ConvNextVisionTower(nn.Module):
         #         },
         #     image_mean=[0.48145466, 0.4578275, 0.40821073],
         #     image_std=[0.26862954, 0.26130258, 0.27577711],)
-        self.image_processor = CLIPImageProcessor.from_pretrained("openai/clip-vit-large-patch14-336")
+        image_processor_name = getattr(self.args, "vision_image_processor", None)
+        if not image_processor_name:
+            raise ValueError("vision_image_processor must be set in the config.")
+        self.image_processor = CLIPImageProcessor.from_pretrained(image_processor_name)
         self.vision_tower = convnext_xxlarge(self.vision_tower_name)
         # self.vision_tower  = timm.create_model(self.vision_tower_name, pretrained=True)
 
@@ -91,21 +95,29 @@ class ConvNextVisionTower(nn.Module):
 
     @property
     def num_attention_heads(self):
-        # as constant
-        return 16
+        value = getattr(self.args, "convnext_num_attention_heads", None)
+        if value is None:
+            raise ValueError("convnext_num_attention_heads must be set in the config.")
+        return value
     
     @property
     def num_layers(self):
-        # as constant
-        return 4
+        value = getattr(self.args, "convnext_num_layers", None)
+        if value is None:
+            raise ValueError("convnext_num_layers must be set in the config.")
+        return value
     
     @property
     def hidden_size(self):
-        if self.select_layer == -2:
-            return 1536
-        else:
-            # -1 
-            return 3072
+        hidden_size_map = getattr(self.args, "convnext_hidden_size_map", None)
+        if not hidden_size_map:
+            raise ValueError("convnext_hidden_size_map must be set in the config.")
+        if self.select_layer in hidden_size_map:
+            return hidden_size_map[self.select_layer]
+        key = str(self.select_layer)
+        if key in hidden_size_map:
+            return hidden_size_map[key]
+        raise ValueError(f"Missing hidden size for select_layer={self.select_layer}.")
 
     @property
     def num_patches(self):

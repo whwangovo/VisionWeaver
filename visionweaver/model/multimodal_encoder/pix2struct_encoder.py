@@ -61,7 +61,10 @@ class Pix2StructVisionTower(nn.Module):
             print('{} is already loaded, `load_model` called again, skipping.'.format(self.vision_tower_name))
             return
         
-        self.image_processor = CLIPImageProcessor.from_pretrained("openai/clip-vit-large-patch14-336")
+        image_processor_name = getattr(self.args, "vision_image_processor", None)
+        if not image_processor_name:
+            raise ValueError("vision_image_processor must be set in the config.")
+        self.image_processor = CLIPImageProcessor.from_pretrained(image_processor_name)
         whole_model = Pix2StructForConditionalGeneration.from_pretrained(self.vision_tower_name)
         self.vision_tower = whole_model.encoder
         self.pix2struct_processor = AutoProcessor.from_pretrained(self.vision_tower_name)
@@ -138,9 +141,14 @@ class Pix2StructVisionTower(nn.Module):
 
     @property
     def hidden_size(self):
-        # Hard code
-        hidden_dim = 1536
-        return hidden_dim
+        hidden_size = getattr(self.vision_tower.config, "hidden_size", None)
+        if hidden_size is None and isinstance(self.vision_tower.config, dict):
+            hidden_size = self.vision_tower.config.get("hidden_size")
+        if hidden_size is None:
+            hidden_size = getattr(self.args, "pix2struct_hidden_size", None)
+        if hidden_size is None:
+            raise ValueError("pix2struct_hidden_size must be set in the config.")
+        return hidden_size
 
     @property
     def num_patches(self):

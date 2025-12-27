@@ -5,9 +5,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Sampler
 from transformers import Trainer
-from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS
 from transformers.trainer import (
-    get_parameter_names,
     has_length,
     is_sagemaker_mp_enabled,
     logger,
@@ -174,7 +172,9 @@ class LengthGroupedSampler(Sampler):
 
 class VisionWeaverTrainer(Trainer):
 
-    def _get_train_sampler(self, dataset: torch.utils.data.Dataset) -> Optional[torch.utils.data.Sampler]:
+    def _get_train_sampler(
+        self, dataset: torch.utils.data.Dataset
+    ) -> Optional[torch.utils.data.Sampler]:
         current_dataset = dataset if dataset is not None else self.train_dataset
         
         if current_dataset is None or not has_length(current_dataset):
@@ -204,56 +204,30 @@ class VisionWeaverTrainer(Trainer):
         opt_model = self.model
 
         if self.optimizer is None:
-            decay_parameters = get_parameter_names(opt_model, ALL_LAYERNORM_LAYERS)
-            decay_parameters = [name for name in decay_parameters if "bias" not in name]
+            decay_parameters = set(self.get_decay_parameter_names(opt_model))
+            named_parameters = list(opt_model.named_parameters())
             if self.args.mm_projector_lr is not None:
-                projector_parameters = [
-                    name
-                    for name, _ in opt_model.named_parameters()
-                    if "mm_projector" in name
-                ]
+                projector_parameters = {
+                    name for name, _ in named_parameters if "mm_projector" in name
+                }
                 optimizer_grouped_parameters = [
                     {
-                        "params": [
-                            p
-                            for n, p in opt_model.named_parameters()
-                            if (
-                                n in decay_parameters
-                                and n not in projector_parameters
-                                and p.requires_grad
-                            )
-                        ],
+                        "params": [p for n, p in named_parameters if (n in decay_parameters and n not in projector_parameters and p.requires_grad)],
                         "weight_decay": self.args.weight_decay,
                     },
                     {
-                        "params": [
-                            p
-                            for n, p in opt_model.named_parameters()
-                            if (
-                                n not in decay_parameters
-                                and n not in projector_parameters
-                                and p.requires_grad
-                            )
-                        ],
+                        "params": [p for n, p in named_parameters if (n not in decay_parameters and n not in projector_parameters and p.requires_grad)],
                         "weight_decay": 0.0,
                     },
                     {
-                        "params": [
-                            p
-                            for n, p in opt_model.named_parameters()
-                            if (
-                                n in decay_parameters
-                                and n in projector_parameters
-                                and p.requires_grad
-                            )
-                        ],
+                        "params": [p for n, p in named_parameters if (n in decay_parameters and n in projector_parameters and p.requires_grad)],
                         "weight_decay": self.args.weight_decay,
                         "lr": self.args.mm_projector_lr,
                     },
                     {
                         "params": [
                             p
-                            for n, p in opt_model.named_parameters()
+                            for n, p in named_parameters
                             if (
                                 n not in decay_parameters
                                 and n in projector_parameters
@@ -269,7 +243,7 @@ class VisionWeaverTrainer(Trainer):
                     {
                         "params": [
                             p
-                            for n, p in opt_model.named_parameters()
+                            for n, p in named_parameters
                             if (n in decay_parameters and p.requires_grad)
                         ],
                         "weight_decay": self.args.weight_decay,
@@ -277,15 +251,15 @@ class VisionWeaverTrainer(Trainer):
                     {
                         "params": [
                             p
-                            for n, p in opt_model.named_parameters()
+                            for n, p in named_parameters
                             if (n not in decay_parameters and p.requires_grad)
                         ],
                         "weight_decay": 0.0,
                     },
                 ]
 
-            optimizer_cls, optimizer_kwargs = Trainer.get_optimizer_cls_and_kwargs(
-                self.args
+            optimizer_cls, optimizer_kwargs = self.get_optimizer_cls_and_kwargs(
+                self.args, opt_model
             )
 
             self.optimizer = optimizer_cls(
@@ -313,7 +287,7 @@ class VisionWeaverTrainer(Trainer):
 
         return self.optimizer
 
-    def _save_checkpoint(self, model, trial, metrics=None):
+    def _save_checkpoint(self, model, trial):
         if getattr(self.args, "tune_mm_mlp_adapter", False):
             from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
 
@@ -331,13 +305,13 @@ class VisionWeaverTrainer(Trainer):
                 self.model.named_parameters(), keys_to_match
             )
 
-            if self.args.local_rank == 0 or self.args.local_rank == -1:
+            if self.is_world_process_zero():
                 self.model.config.save_pretrained(output_dir)
                 torch.save(
                     weight_to_save, os.path.join(output_dir, f"mm_projector.bin")
                 )
         else:
-            super(VisionWeaverTrainer, self)._save_checkpoint(model, trial, metrics)
+            super()._save_checkpoint(model, trial)
 
     def _save(self, output_dir: Optional[str] = None, state_dict=None):
         if getattr(self.args, "tune_mm_mlp_adapter", False):

@@ -1,0 +1,9 @@
+tokens:
+  unk_index: 0
+  ignore_index: -100
+  image_token_index: -200
+  default_image_token: "<image>"
+  default_image_patch_token: "<im_patch>"
+  default_im_start_token: "<im_start>"
+  default_im_end_token: "<im_end>"
+  image_placeholder: "<image-placeholder>"

@@ -88,7 +88,10 @@ class VaryVisionTower(nn.Module):
             print('{} is already loaded, `load_model` called again, skipping.'.format(self.vision_tower_name))
             return
         
-        self.image_processor = CLIPImageProcessor.from_pretrained("openai/clip-vit-large-patch14-336")
+        image_processor_name = getattr(self.args, "vision_image_processor", None)
+        if not image_processor_name:
+            raise ValueError("vision_image_processor must be set in the config.")
+        self.image_processor = CLIPImageProcessor.from_pretrained(image_processor_name)
         self.vision_tower = build_vary(self.vision_tower_name)
 
         cls_ = self.vision_tower
@@ -143,7 +146,10 @@ class VaryVisionTower(nn.Module):
 
     @property
     def hidden_size(self):
-        return 1024
+        hidden_size = getattr(self.args, "vary_hidden_size", None)
+        if hidden_size is None:
+            raise ValueError("vary_hidden_size must be set in the config.")
+        return hidden_size
 
     @property
     def num_patches(self):

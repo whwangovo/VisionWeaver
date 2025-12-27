@@ -137,7 +137,10 @@ class SAMVisionTower(nn.Module):
         # }
         
         # print("input_image_size", input_image_size)
-        self.image_processor = CLIPImageProcessor.from_pretrained("openai/clip-vit-large-patch14-336")
+        image_processor_name = getattr(self.args, "vision_image_processor", None)
+        if not image_processor_name:
+            raise ValueError("vision_image_processor must be set in the config.")
+        self.image_processor = CLIPImageProcessor.from_pretrained(image_processor_name)
         self.vision_tower = SamModel.from_pretrained(self.vision_tower_name).vision_encoder
         # sam_model.neck = ShortSamVisionNeck(sam_model.config)
         self.sam_model_config = self.vision_tower.config
@@ -190,7 +193,12 @@ class SAMVisionTower(nn.Module):
 
     @property
     def hidden_size(self):
-        return 1024
+        hidden_size = getattr(self.sam_model_config, "hidden_size", None)
+        if hidden_size is None:
+            hidden_size = getattr(self.args, "sam_hidden_size", None)
+        if hidden_size is None:
+            raise ValueError("sam_hidden_size must be set in the config.")
+        return hidden_size
 
     @property
     def num_patches(self):
