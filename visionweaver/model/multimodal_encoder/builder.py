@@ -4,9 +4,7 @@ from .clip_encoder import CLIPVisionTower
 from .convnext_encoder import ConvNextVisionTower
 from .dino_encoder import DINOVisionTower
 from .eva_encoder import EVAVisionTower
-from .hr_clip_encoder import HRCLIPVisionTower
 from .sam_encoder import SAMVisionTower
-from .siglip_encoder import SiglipVisionTower
 from .vary_encoder import VaryVisionTower
 from .visionweaver_encoder import VisionTower
 

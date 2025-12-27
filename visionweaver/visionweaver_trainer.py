@@ -5,8 +5,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Sampler
 from transformers import Trainer
+from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS
 from transformers.trainer import (
-    ALL_LAYERNORM_LAYERS,
     get_parameter_names,
     has_length,
     is_sagemaker_mp_enabled,
