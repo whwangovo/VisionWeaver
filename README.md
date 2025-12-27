@@ -2,7 +2,7 @@
 [![arXiv](https://img.shields.io/badge/Arxiv-2509.13836v1-b31b1b.svg?logo=arXiv)](https://arxiv.org/abs/2509.13836v1) 
 [![hf_space](https://img.shields.io/badge/🤗-Dataset%20In%20HF-red.svg)](https://huggingface.co/datasets/KirenWH/VHBench_10)
 
-This repository contains the official implementation of <b>VisionWeaver</b> and the <b>VHBench-10</b> benchmark. Vision Weaver is a novel architecture designed to mitigate object hallucinations in Large Vision-Language Models (LVLMs) by dynamically aggregating features from multiple specialized visual encoders.
+This repository contains the official implementation of <b>VisionWeaver</b> and the <b>VHBench-10</b> benchmark. VisionWeaver is a novel architecture designed to mitigate object hallucinations in Large Vision-Language Models (LVLMs) by dynamically aggregating features from multiple specialized visual encoders.
 
 ## 📣 News
 - `[2025.12.28]`  🔥 we released the training code.
