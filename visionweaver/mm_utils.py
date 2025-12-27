@@ -7,7 +7,7 @@ import torch
 from PIL import Image
 from transformers import StoppingCriteria
 
-from visionweaver.constants import IMAGE_TOKEN_INDEX
+from visionweaver import constants
 from visionweaver.utils import rank0_print
 
 
@@ -203,9 +203,17 @@ def process_images(images, image_processor, model_cfg):
 
 
 def tokenizer_image_token(
-    prompt, tokenizer, image_token_index=IMAGE_TOKEN_INDEX, return_tensors=None
+    prompt,
+    tokenizer,
+    image_token_index=None,
+    return_tensors=None,
 ):
-    prompt_chunks = [tokenizer(chunk).input_ids for chunk in prompt.split("<image>")]
+    if image_token_index is None:
+        image_token_index = constants.IMAGE_TOKEN_INDEX
+    prompt_chunks = [
+        tokenizer(chunk).input_ids
+        for chunk in prompt.split(constants.DEFAULT_IMAGE_TOKEN)
+    ]
 
     def insert_separator(X, sep):
         # it = [ele for sublist in zip(X, [sep] * len(X)) for ele in sublist][:-1]

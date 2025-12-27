@@ -15,12 +15,15 @@
 #    limitations under the License.
 import logging
 import os
-import pathlib
-import sys
 
+import hydra
 import torch
 import transformers
+from omegaconf import DictConfig, OmegaConf
+from transformers.trainer_utils import get_last_checkpoint
 
+from visionweaver import config as config_lib
+from visionweaver import constants
 from visionweaver import conversation as conversation_lib
 from visionweaver.args_utils import DataArguments, ModelArguments, TrainingArguments
 from visionweaver.data_utils import make_supervised_data_module
@@ -63,9 +66,9 @@ def get_peft_state_maybe_zero_3(named_params, bias):
                 lora_bias_names.add(bias_name)
             elif "bias" in k:
                 maybe_lora_bias[k] = t
-        for k, t in maybe_lora_bias:
-            if bias_name in lora_bias_names:
-                to_return[bias_name] = t
+        for k, t in maybe_lora_bias.items():
+            if k in lora_bias_names:
+                to_return[k] = t
     else:
         raise NotImplementedError
     to_return = {k: maybe_zero_3(v, ignore_status=True) for k, v in to_return.items()}
@@ -92,22 +95,6 @@ def get_mm_adapter_state_maybe_zero_3(named_params, keys_to_match):
         k: maybe_zero_3(v, ignore_status=True).cpu() for k, v in to_return.items()
     }
     return to_return
-
-
-def find_all_linear_names(model):
-    cls = torch.nn.Linear
-    lora_module_names = set()
-    multimodal_keywords = ["mm_projector", "vision_tower", "vision_resampler"]
-    for name, module in model.named_modules():
-        if any(mm_keyword in name for mm_keyword in multimodal_keywords):
-            continue
-        if isinstance(module, cls):
-            names = name.split(".")
-            lora_module_names.add(names[0] if len(names) == 1 else names[-1])
-
-    if "lm_head" in lora_module_names:  # needed for 16-bit
-        lora_module_names.remove("lm_head")
-    return list(lora_module_names)
 
 
 def safe_save_model_for_hf_trainer(trainer: transformers.Trainer, output_dir: str):
@@ -153,7 +140,8 @@ def safe_save_model_for_hf_trainer(trainer: transformers.Trainer, output_dir: st
         check_only_save_mm_adapter_tunnable = False
 
     trainer.accelerator.wait_for_everyone()
-    torch.cuda.synchronize()
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
     rank0_print(f"Only save projectors: {check_only_save_mm_adapter_tunnable}")
 
     if check_only_save_mm_adapter_tunnable:
@@ -179,17 +167,23 @@ def safe_save_model_for_hf_trainer(trainer: transformers.Trainer, output_dir: st
         trainer._save(output_dir, state_dict=cpu_state_dict)  # noqa
 
 
-def train():
-    global local_rank
+@hydra.main(version_base=None, config_path="configs", config_name="train")
+def train(cfg: DictConfig):
+    config_lib.set_config(cfg)
+    constants.reload_constants(cfg)
 
-    parser = transformers.HfArgumentParser(
-        (ModelArguments, DataArguments, TrainingArguments)
+    model_args = ModelArguments(**OmegaConf.to_container(cfg.model, resolve=True))
+    data_args = DataArguments(**OmegaConf.to_container(cfg.data, resolve=True))
+    training_args = TrainingArguments(
+        **OmegaConf.to_container(cfg.training, resolve=True)
     )
-    model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+    env_local_rank = os.environ.get("LOCAL_RANK")
+    if env_local_rank is not None:
+        training_args.local_rank = int(env_local_rank)
 
-    local_rank = training_args.local_rank
-
-    model, tokenizer = get_model(model_args, training_args)
+    model, tokenizer = get_model(
+        model_args, training_args, tokenizer_cfg=cfg.tokenizer
+    )
     model.config.use_cache = False
 
     if training_args.gradient_checkpointing:
@@ -354,8 +348,11 @@ def train():
         model=model, tokenizer=tokenizer, args=training_args, **data_module
     )
 
-    if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):
-        trainer.train(resume_from_checkpoint=True)
+    last_checkpoint = None
+    if os.path.isdir(training_args.output_dir):
+        last_checkpoint = get_last_checkpoint(training_args.output_dir)
+    if last_checkpoint and not training_args.overwrite_output_dir:
+        trainer.train(resume_from_checkpoint=last_checkpoint)
     else:
         trainer.train()
     trainer.save_state()

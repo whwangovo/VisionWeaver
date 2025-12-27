@@ -103,10 +103,10 @@ class SAMVisionTower(nn.Module):
 
         self.args = args
         self.vision_tower_name = vision_tower
-        self.freeze_vision = getattr(args, 'freeze_vision_tower', True)
+        self.freeze_vision = args.freeze_vision_tower
         
-        self.input_image_size = getattr(args, 'input_image_size', 336)
-        self.pixel_shuffle = getattr(args, 'add_pixel_shuffle', False)
+        self.input_image_size = args.input_image_size
+        self.pixel_shuffle = args.add_pixel_shuffle
 
         self.load_model()
 

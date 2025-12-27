@@ -1,51 +1,26 @@
-#!/bin/bash
-export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CONFIG_NAME="${CONFIG_NAME:-pretrain_llama_3b}"
+cd "$ROOT_DIR"
+
+export PYTHONPATH="${PYTHONPATH:-}:$ROOT_DIR"
 export WANDB_PROJECT="hallucination"
 
-MODEL_PATH=checkpoints/Llama-3.2-3B-Instruct
-DATA_PATH=mock/LLaVA-Pretrain
-VISION_TOWER="convnext;eva;sam;vary;dino"
+NUM_GPUS=1
+NUM_MACHINES=1
+MACHINE_RANK=0
+MAIN_PROCESS_IP="127.0.0.1"
+MAIN_PROCESS_PORT=29500
 
-LLM_VERSION_CLEAN="llama3"
-VISION_TOWER_CLEAN="ccesvd"
-MM_VERSION="v3"
-BASE_RUN_NAME="dromo-${VISION_TOWER_CLEAN}-${LLM_VERSION_CLEAN}-${MM_VERSION}-pretrain"
+ACCELERATE_ARGS=(
+  --num_processes "$NUM_GPUS"
+  --num_machines "$NUM_MACHINES"
+  --machine_rank "$MACHINE_RANK"
+  --main_process_ip "$MAIN_PROCESS_IP"
+  --main_process_port "$MAIN_PROCESS_PORT"
+)
 
-deepspeed train_visionweaver.py \
-    --deepspeed ./scripts/zero3.json \
-    --model_name_or_path $MODEL_PATH \
-    --version plain \
-    --data_path $DATA_PATH/blip_laion_cc_sbu_558k.json \
-    --image_folder $DATA_PATH \
-    --vision_tower $VISION_TOWER \
-    --mm_version $MM_VERSION \
-    --mm_projector_type mlp2x_gelu \
-    --mm_tunable_parts "dromo_stage_1" \
-    --mm_vision_select_layer -2 \
-    --mm_vision_select_feature cls_patch \
-    --mm_use_im_start_end False \
-    --mm_use_im_patch_token False \
-    --bf16 True \
-    --output_dir outputs/pretrain_outputs/$BASE_RUN_NAME \
-    --run_name $BASE_RUN_NAME \
-    --num_train_epochs 1 \
-    --per_device_train_batch_size 16 \
-    --per_device_eval_batch_size 4 \
-    --gradient_accumulation_steps 2 \
-    --eval_strategy "no" \
-    --save_strategy "no" \
-    --save_steps 24000 \
-    --save_total_limit 1 \
-    --learning_rate 1e-3 \
-    --weight_decay 0. \
-    --warmup_ratio 0.03 \
-    --lr_scheduler_type "cosine" \
-    --logging_steps 1 \
-    --tf32 True \
-    --model_max_length 2048 \
-    --gradient_checkpointing True \
-    --dataloader_num_workers 4 \
-    --lazy_preprocess True \
-    --report_to wandb \
-    --verbose_logging \
-    --attn_implementation sdpa
+accelerate launch "${ACCELERATE_ARGS[@]}" train_visionweaver.py \
+  --config-name "$CONFIG_NAME"

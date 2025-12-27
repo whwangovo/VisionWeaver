@@ -16,11 +16,11 @@ class DINOVisionTower(nn.Module):
         self.is_loaded = False
 
         self.vision_tower_name = vision_tower
-        self.select_layer = getattr(args, 'mm_vision_select_layer', -1)
-        self.select_feature = getattr(args, 'mm_vision_select_feature', 'patch')
-        self.freeze_vision = getattr(args, 'freeze_vision_tower', True)
+        self.select_layer = args.mm_vision_select_layer
+        self.select_feature = args.mm_vision_select_feature
+        self.freeze_vision = args.freeze_vision_tower
 
-        self.input_image_size = getattr(args, 'input_image_size', 336)
+        self.input_image_size = args.input_image_size
 
         #self.load_model()
 

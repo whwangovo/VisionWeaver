@@ -1,0 +1,45 @@
+defaults:
+  - train
+  - _self_
+
+model:
+  model_name_or_path: "checkpoints/Llama-3.2-3B-Instruct"
+  vision_tower: "convnext;eva;sam;vary;dino"
+  version: "plain"
+  mm_projector_type: "mlp2x_gelu"
+  mm_tunable_parts: "dromo_stage_1"
+  mm_vision_select_layer: -2
+  mm_vision_select_feature: "cls_patch"
+  mm_use_im_start_end: false
+  mm_use_im_patch_token: false
+
+data:
+  data_path: "mock/LLaVA-Pretrain/blip_laion_cc_sbu_558k.json"
+  image_folder: "mock/LLaVA-Pretrain"
+  lazy_preprocess: true
+
+training:
+  output_dir: "outputs/pretrain_outputs/dromo-ccesvd-llama3-pretrain"
+  run_name: "dromo-ccesvd-llama3-pretrain"
+  bf16: true
+  num_train_epochs: 1
+  per_device_train_batch_size: 16
+  per_device_eval_batch_size: 4
+  gradient_accumulation_steps: 2
+  eval_strategy: "no"
+  save_strategy: "no"
+  save_steps: 24000
+  save_total_limit: 1
+  learning_rate: 1e-3
+  weight_decay: 0.0
+  warmup_ratio: 0.03
+  lr_scheduler_type: "cosine"
+  logging_steps: 1
+  tf32: true
+  model_max_length: 2048
+  gradient_checkpointing: true
+  dataloader_num_workers: 4
+  report_to: "wandb"
+  verbose_logging: true
+  attn_implementation: "sdpa"
+  deepspeed: "scripts/zero3.json"

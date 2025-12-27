@@ -1,0 +1,131 @@
+hydra:
+  run:
+    dir: .
+  output_subdir: null
+
+model:
+  model_name_or_path: "facebook/opt-125m"
+  vision_tower: null
+  mm_tunable_parts: null
+  freeze_backbone: false
+  freeze_vision_tower: true
+  tune_mm_mlp_adapter: false
+  tune_vision_adapter: false
+  pretrain_mm_mlp_adapter: null
+  clip_hr: false
+  image_size: 336
+  patch_size: 14
+  num_experts: 0
+  version: "v0"
+  mm_vision_select_layer: -1
+  mm_projector_type: "linear"
+  mm_use_im_start_end: false
+  mm_use_im_patch_token: true
+  mm_patch_merge_type: "flat"
+  mm_vision_select_feature: "patch"
+  input_image_size: 336
+  do_resize: true
+  de_normalize: true
+  pix2struct_max_tokens: 2025
+  pix2struct_grid_size: 45
+  pix2struct_resize_size: [32, 32]
+  unfreeze_mm_vision_tower: false
+  s2_scales: "336,672,1008"
+  add_pixel_shuffle: false
+
+data:
+  data_path: null
+  lazy_preprocess: false
+  is_multimodal: false
+  image_folder: null
+  image_aspect_ratio: "square"
+
+training:
+  output_dir: "outputs"
+  cache_dir: null
+  deepspeed: null
+  optim: "adamw_torch"
+  remove_unused_columns: false
+  freeze_mm_mlp_adapter: false
+  mpt_attn_impl: "triton"
+  model_max_length: 2048
+  double_quant: true
+  quant_type: "nf4"
+  bits: 16
+  lora_enable: false
+  lora_r: 64
+  lora_alpha: 16
+  lora_dropout: 0.05
+  lora_weight_path: ""
+  lora_bias: "none"
+  mm_projector_lr: null
+  group_by_modality_length: false
+  auto_find_batch_size: false
+  gradient_accumulation_steps: 1
+  gradient_checkpointing: true
+  verbose_logging: false
+  tf32: false
+  attn_implementation: "flash_attention_2"
+  per_device_train_batch_size: 1
+  per_device_eval_batch_size: 1
+  num_train_epochs: 1
+  learning_rate: 5.0e-5
+  weight_decay: 0.0
+  warmup_ratio: 0.0
+  lr_scheduler_type: "cosine"
+  logging_steps: 10
+  save_steps: 500
+  save_total_limit: 2
+  eval_strategy: "no"
+  save_strategy: "steps"
+  run_name: ""
+  report_to: "none"
+  dataloader_num_workers: 0
+  bf16: false
+  fp16: false
+  local_rank: -1
+  fsdp: ""
+
+tokenizer:
+  use_fast: false
+  padding_side: "right"
+
+tokens:
+  unk_index: 0
+  ignore_index: -100
+  image_token_index: -200
+  default_image_token: "<image>"
+  default_image_patch_token: "<im_patch>"
+  default_im_start_token: "<im_start>"
+  default_im_end_token: "<im_end>"
+  image_placeholder: "<image-placeholder>"
+
+logging:
+  log_dir: "."
+
+messages:
+  server_error_msg: "**NETWORK ERROR DUE TO HIGH TRAFFIC. PLEASE REGENERATE OR REFRESH THIS PAGE.**"
+  moderation_msg: "YOUR INPUT VIOLATES OUR CONTENT MODERATION GUIDELINES. PLEASE TRY AGAIN."
+
+heartbeat:
+  controller_expiration: 30
+  worker_interval: 15
+
+prompts:
+  qwen_system_message: "You are a helpful assistant."
+  llama3_system_message: "You are a helpful language and vision assistant. You are able to understand the visual content that the user provides, and assist the user with a variety of tasks using natural language."
+  begin_signal: "### "
+  end_signal: "\n"
+
+media:
+  image_extensions: [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".webp"]
+  video_extensions: [".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".mpeg", ".mpg"]
+
+accelerate:
+  num_gpus: 1
+  num_machines: 1
+  machine_rank: 0
+  main_process_ip: "127.0.0.1"
+  main_process_port: 29500
+  config_file: ""
+  extra_args: ""

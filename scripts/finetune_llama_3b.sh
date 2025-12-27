@@ -1,54 +1,26 @@
-#!/bin/bash
-export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CONFIG_NAME="${CONFIG_NAME:-finetune_llama_3b}"
+cd "$ROOT_DIR"
+
+export PYTHONPATH="${PYTHONPATH:-}:$ROOT_DIR"
 export WANDB_PROJECT="hallucination"
 
-MODEL_PATH=checkpoints/Qwen/Qwen2.5-3B-Instruct
-DATA_PATH=playground/LLaVA-Finetune
-VISION_TOWER="convnext;eva;sam;vary;dino"
+NUM_GPUS=1
+NUM_MACHINES=1
+MACHINE_RANK=0
+MAIN_PROCESS_IP="127.0.0.1"
+MAIN_PROCESS_PORT=29500
 
-LLM_VERSION_CLEAN="qwen"
-VISION_TOWER_CLEAN="ccesvd"
-MM_VERSION="v3"
-BASE_RUN_NAME="dromo-${VISION_TOWER_CLEAN}-${LLM_VERSION_CLEAN}-${MM_VERSION}-finetune"
+ACCELERATE_ARGS=(
+  --num_processes "$NUM_GPUS"
+  --num_machines "$NUM_MACHINES"
+  --machine_rank "$MACHINE_RANK"
+  --main_process_ip "$MAIN_PROCESS_IP"
+  --main_process_port "$MAIN_PROCESS_PORT"
+)
 
-deepspeed train_visionweaver.py \
-    --deepspeed ./scripts/zero3.json \
-    --model_name_or_path $MODEL_PATH \
-    --version qwen \
-    --data_path $DATA_PATH/llava_v1_5_mix665k.json \
-    --image_folder $DATA_PATH \
-    --vision_tower $VISION_TOWER \
-    --mm_version $MM_VERSION \
-    --pretrain_mm_mlp_adapter outputs/pretrain_outputs/dromo-ccesvd-qwen-v2-pretrain/mm_projector.bin \
-    --mm_projector_type mlp2x_gelu \
-    --mm_tunable_parts "dromo_stage_2" \
-    --mm_vision_select_layer -2 \
-    --mm_vision_select_feature cls_patch \
-    --mm_use_im_start_end False \
-    --mm_use_im_patch_token False \
-    --image_aspect_ratio pad \
-    --group_by_modality_length True \
-    --bf16 True \
-    --output_dir outputs/finetune_outputs/$BASE_RUN_NAME \
-    --run_name $BASE_RUN_NAME \
-    --num_train_epochs 1 \
-    --per_device_train_batch_size 8 \
-    --per_device_eval_batch_size 4 \
-    --gradient_accumulation_steps 2 \
-    --eval_strategy "no" \
-    --save_strategy "no" \
-    --save_steps 50000 \
-    --save_total_limit 1 \
-    --learning_rate 2e-5 \
-    --weight_decay 0. \
-    --warmup_ratio 0.03 \
-    --lr_scheduler_type "cosine" \
-    --logging_steps 1 \
-    --tf32 True \
-    --model_max_length 2048 \
-    --gradient_checkpointing True \
-    --dataloader_num_workers 4 \
-    --lazy_preprocess True \
-    --report_to wandb \
-    --verbose_logging \
-    --attn_implementation sdpa
+accelerate launch "${ACCELERATE_ARGS[@]}" train_visionweaver.py \
+  --config-name "$CONFIG_NAME"

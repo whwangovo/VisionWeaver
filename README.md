@@ -26,7 +26,12 @@ To be released.
 
 ## 🗝️ Training & Inference
 
-To be released.
+Training uses Hydra config files.
+
+- Default config: `configs/train.yaml`
+- Override example: `python train_visionweaver.py model.model_name_or_path=... training.output_dir=...`
+- Optional env override: `VISIONWEAVER_CONFIG=/path/to/config.yaml`
+- Accelerate launch config: edit `configs/train.yaml` under `accelerate.*` or override via env (e.g. `NUM_GPUS=8`).
 
 ## 🐳 VHBench-10 Benchmark
 
@@ -59,4 +64,3 @@ If you find our paper and code useful in your research, please consider giving a
   year={2025}
 }
 ```
-

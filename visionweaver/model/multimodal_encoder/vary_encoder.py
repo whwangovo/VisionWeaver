@@ -77,9 +77,9 @@ class VaryVisionTower(nn.Module):
 
         self.args = args
         self.vision_tower_name = vision_tower
-        self.freeze_vision = getattr(args, 'freeze_vision_tower', True)
+        self.freeze_vision = args.freeze_vision_tower
         
-        self.input_image_size = getattr(args, 'input_image_size', 336)
+        self.input_image_size = args.input_image_size
 
         self.load_model()
 

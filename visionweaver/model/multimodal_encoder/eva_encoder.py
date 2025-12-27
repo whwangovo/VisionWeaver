@@ -18,10 +18,10 @@ class EVAVisionTower(nn.Module):
         
         self.args = args
         self.vision_tower_name = vision_tower
-        self.select_layer = getattr(args, 'mm_vision_select_layer', -1)
-        self.freeze_vision = getattr(args, 'freeze_vision_tower', True)
+        self.select_layer = args.mm_vision_select_layer
+        self.freeze_vision = args.freeze_vision_tower
 
-        self.input_image_size = getattr(args, 'input_image_size', 336)
+        self.input_image_size = args.input_image_size
         self.input_image_tokens = 576
         # self.vision_tower.config = vision_tower_config
 

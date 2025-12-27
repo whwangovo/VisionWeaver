@@ -1,54 +1,73 @@
 # Python
-__pycache__
-*.pyc
-*.egg-info
-dist
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+*.whl
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
 
 # Jupyter
-.ipynb_checkpoints
+.ipynb_checkpoints/
 *.ipynb
 
-# Logs and WandB
+# Logs
 *.log
 *.log.*
-wandb
+logs/
 
-# Data
+# Experiment tracking
+wandb/
+
+# Data files
 *.json
 *.jsonl
 !**/alpaca-data-conversation.json
 **temp_data**
 
+# Checkpoints and outputs
+checkpoints/
+ckpts*/
+output/
+outputs/
+serve_images/
+images/
+
+# Hydra
+.hydra/
+multirun/
+
 # Editors and OS
-.idea
-.vscode
+.idea/
+.vscode/
 *.swp
 .DS_Store
 
-# Checkpoints and Outputs
-checkpoints
-ckpts*
-output
-outputs
-**outputs**
-serve_images/
-images
-
-# Project Specific
-playground
-lmms
-notebooks
-tests
-analyze
-illusion
-img
-inference
-train_scripts
+# Project specific
+playground/
+lmms/
+notebooks/
+tests/
+analyze/
+illusion/
+img/
+inference/
+train_scripts/
 train_dromo.py
-llava
+llava/
+backups/
 
 # DevContainer
 !.devcontainer/*
+
 # pixi environments
 .pixi/*
 !.pixi/config.toml

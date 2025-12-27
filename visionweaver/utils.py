@@ -6,10 +6,7 @@ import sys
 import requests
 import torch
 
-from visionweaver.constants import LOGDIR
-
-server_error_msg = "**NETWORK ERROR DUE TO HIGH TRAFFIC. PLEASE REGENERATE OR REFRESH THIS PAGE.**"
-moderation_msg = "YOUR INPUT VIOLATES OUR CONTENT MODERATION GUIDELINES. PLEASE TRY AGAIN."
+from visionweaver import constants
 
 handler = None
 
@@ -86,8 +83,8 @@ def build_logger(logger_name, logger_filename):
 
     # Add a file handler for all loggers
     if handler is None:
-        os.makedirs(LOGDIR, exist_ok=True)
-        filename = os.path.join(LOGDIR, logger_filename)
+        os.makedirs(constants.LOGDIR, exist_ok=True)
+        filename = os.path.join(constants.LOGDIR, logger_filename)
         handler = logging.handlers.TimedRotatingFileHandler(
             filename, when='D', utc=True, encoding='UTF-8')
         handler.setFormatter(formatter)
@@ -166,3 +163,11 @@ def pretty_print_semaphore(semaphore):
     if semaphore is None:
         return "None"
     return f"Semaphore(value={semaphore._value}, locked={semaphore.locked()})"
+
+
+def __getattr__(name):
+    if name == "server_error_msg":
+        return constants.SERVER_ERROR_MSG
+    if name == "moderation_msg":
+        return constants.MODERATION_MSG
+    raise AttributeError(f"module {__name__} has no attribute {name}")

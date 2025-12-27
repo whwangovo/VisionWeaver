@@ -20,6 +20,8 @@ dependencies = [
     "tokenizers", 
     "sentencepiece", 
     "shortuuid",
+    "hydra-core",
+    "omegaconf",
     "accelerate", 
     "peft", 
     "scipy",

@@ -40,13 +40,19 @@ class Pix2StructVisionTower(nn.Module):
         
         self.args = args
         self.vision_tower_name = vision_tower
-        self.select_layer = getattr(args, 'mm_vision_select_layer', -1)
-        self.freeze_vision = getattr(args, 'freeze_vision_tower', True)
+        self.select_layer = args.mm_vision_select_layer
+        self.freeze_vision = args.freeze_vision_tower
         
-        self.input_image_size = getattr(args, 'input_image_size', 336)
+        self.input_image_size = args.input_image_size
 
-        self.do_resize = getattr(args, 'do_resize', True)
-        self.de_normalize = getattr(args, 'de_normalize', True)# de-normalize the input image and perform preprocessing with pix2struct processor
+        self.do_resize = args.do_resize
+        self.de_normalize = args.de_normalize
+        self.max_image_tokens = args.pix2struct_max_tokens
+        self.grid_size = args.pix2struct_grid_size
+        self.resize_size = args.pix2struct_resize_size
+
+        if self.max_image_tokens is None or self.grid_size is None or self.resize_size is None:
+            raise ValueError("pix2struct_* config values must be set.")
         
         self.load_model()
 
@@ -80,13 +86,22 @@ class Pix2StructVisionTower(nn.Module):
         else:
             x = images
 
-        image_features = self.vision_tower(**(x.to(device=self.device, dtype=self.dtype))).last_hidden_state
+        image_features = self.vision_tower(
+            **(x.to(device=self.device, dtype=self.dtype))
+        ).last_hidden_state
         bs, n, c = image_features.shape
-        image_features  = image_features[:, :2025, :] # HARD CODE
+        image_features = image_features[:, : self.max_image_tokens, :]
         
         if self.do_resize:
-            image_features = image_features.transpose(1,2).reshape(bs, c, 45, 45) # HARD CODE
-            image_features = F.interpolate(image_features.float(), size=(32, 32), mode='bilinear', align_corners=True).to(dtype=image_features.dtype) # HARD CODE
+            image_features = image_features.transpose(1, 2).reshape(
+                bs, c, self.grid_size, self.grid_size
+            )
+            image_features = F.interpolate(
+                image_features.float(),
+                size=tuple(self.resize_size),
+                mode="bilinear",
+                align_corners=True,
+            ).to(dtype=image_features.dtype)
             
         image_features = self.interpolate_pos_encoding(image_features)
 

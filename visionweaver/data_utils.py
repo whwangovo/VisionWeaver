@@ -2,7 +2,7 @@ import copy
 import json
 import os
 from dataclasses import dataclass
-from typing import Dict, Sequence
+from typing import Dict, Optional, Sequence
 
 import tokenizers
 import torch
@@ -13,13 +13,8 @@ from torch.utils.data import Dataset
 
 from visionweaver import conversation as conversation_lib
 from visionweaver.args_utils import DataArguments
-from visionweaver.constants import (
-    DEFAULT_IM_END_TOKEN,
-    DEFAULT_IM_START_TOKEN,
-    DEFAULT_IMAGE_TOKEN,
-    IGNORE_INDEX,
-    IMAGE_TOKEN_INDEX,
-)
+from visionweaver import constants
+from visionweaver.config import get_config
 from visionweaver.mm_utils import tokenizer_image_token
 from visionweaver.utils import rank0_print
 
@@ -59,17 +54,18 @@ def _mask_targets(target, tokenized_lens, speakers):
     # cur_idx = 0
     cur_idx = tokenized_lens[0]
     tokenized_lens = tokenized_lens[1:]
-    target[:cur_idx] = IGNORE_INDEX
+    target[:cur_idx] = constants.IGNORE_INDEX
     for tokenized_len, speaker in zip(tokenized_lens, speakers):
         if speaker == "human":
-            target[cur_idx + 2 : cur_idx + tokenized_len] = IGNORE_INDEX
+            target[cur_idx + 2 : cur_idx + tokenized_len] = constants.IGNORE_INDEX
         cur_idx += tokenized_len
 
 
 def _add_speaker_and_signal(header, source, get_conversation=True):
     """Add speaker and start/end signal on each round."""
-    BEGIN_SIGNAL = "### "
-    END_SIGNAL = "\n"
+    prompt_cfg = get_config().prompts
+    BEGIN_SIGNAL = prompt_cfg.begin_signal
+    END_SIGNAL = prompt_cfg.end_signal
     conversation = header
     for sentence in source:
         from_str = sentence["from"]
@@ -95,24 +91,24 @@ def preprocess_multimodal(sources: Sequence[str], data_args: DataArguments) -> D
 
     for source in sources:
         for sentence in source:
-            if DEFAULT_IMAGE_TOKEN in sentence["value"]:
+            if constants.DEFAULT_IMAGE_TOKEN in sentence["value"]:
                 sentence["value"] = (
-                    sentence["value"].replace(DEFAULT_IMAGE_TOKEN, "").strip()
+                    sentence["value"].replace(constants.DEFAULT_IMAGE_TOKEN, "").strip()
                 )
-                sentence["value"] = DEFAULT_IMAGE_TOKEN + "\n" + sentence["value"]
+                sentence["value"] = constants.DEFAULT_IMAGE_TOKEN + "\n" + sentence["value"]
                 sentence["value"] = sentence["value"].strip()
                 if "mmtag" in conversation_lib.default_conversation.version:
                     sentence["value"] = sentence["value"].replace(
-                        DEFAULT_IMAGE_TOKEN,
-                        "<Image>" + DEFAULT_IMAGE_TOKEN + "</Image>",
+                        constants.DEFAULT_IMAGE_TOKEN,
+                        "<Image>" + constants.DEFAULT_IMAGE_TOKEN + "</Image>",
                     )
-            replace_token = DEFAULT_IMAGE_TOKEN
+            replace_token = constants.DEFAULT_IMAGE_TOKEN
             if data_args.mm_use_im_start_end:
                 replace_token = (
-                    DEFAULT_IM_START_TOKEN + replace_token + DEFAULT_IM_END_TOKEN
+                    constants.DEFAULT_IM_START_TOKEN + replace_token + constants.DEFAULT_IM_END_TOKEN
                 )
             sentence["value"] = sentence["value"].replace(
-                DEFAULT_IMAGE_TOKEN, replace_token
+                constants.DEFAULT_IMAGE_TOKEN, replace_token
             )
 
     return sources
@@ -168,7 +164,7 @@ def preprocess_llama_2(
 
         rounds = conversation.split(conv.sep2)
         cur_len = 1
-        target[:cur_len] = IGNORE_INDEX
+        target[:cur_len] = constants.IGNORE_INDEX
         for i, rou in enumerate(rounds):
             if rou == "":
                 break
@@ -185,14 +181,14 @@ def preprocess_llama_2(
                 round_len = len(tokenizer(rou).input_ids)
                 instruction_len = len(tokenizer(parts[0]).input_ids) - 2
 
-            target[cur_len : cur_len + instruction_len] = IGNORE_INDEX
+            target[cur_len : cur_len + instruction_len] = constants.IGNORE_INDEX
 
             cur_len += round_len
-        target[cur_len:] = IGNORE_INDEX
+        target[cur_len:] = constants.IGNORE_INDEX
 
         if cur_len < tokenizer.model_max_length:
             if cur_len != total_len:
-                target[:] = IGNORE_INDEX
+                target[:] = constants.IGNORE_INDEX
                 print(
                     f"WARNING: tokenization mismatch: {cur_len} vs. {total_len}."
                     f" (ignored)"
@@ -254,7 +250,7 @@ def preprocess_v1(
 
         rounds = conversation.split(conv.sep2)
         cur_len = 1
-        target[:cur_len] = IGNORE_INDEX
+        target[:cur_len] = constants.IGNORE_INDEX
         for i, rou in enumerate(rounds):
             if rou == "":
                 break
@@ -275,14 +271,14 @@ def preprocess_v1(
                 round_len -= 1
                 instruction_len -= 1
 
-            target[cur_len : cur_len + instruction_len] = IGNORE_INDEX
+            target[cur_len : cur_len + instruction_len] = constants.IGNORE_INDEX
 
             cur_len += round_len
-        target[cur_len:] = IGNORE_INDEX
+        target[cur_len:] = constants.IGNORE_INDEX
 
         if cur_len < tokenizer.model_max_length:
             if cur_len != total_len:
-                target[:] = IGNORE_INDEX
+                target[:] = constants.IGNORE_INDEX
                 print(
                     f"WARNING: tokenization mismatch: {cur_len} vs. {total_len}."
                     f" (ignored)"
@@ -348,7 +344,7 @@ def preprocess_mpt(
                 conv.sep.join(rounds[conv_idx : conv_idx + 2])
             )  # user + gpt
         cur_len = 0
-        target[:cur_len] = IGNORE_INDEX
+        target[:cur_len] = constants.IGNORE_INDEX
         for i, rou in enumerate(re_rounds):
             if rou == "":
                 break
@@ -373,14 +369,14 @@ def preprocess_mpt(
                 round_len += 1
                 instruction_len += 1
 
-            target[cur_len : cur_len + instruction_len] = IGNORE_INDEX
+            target[cur_len : cur_len + instruction_len] = constants.IGNORE_INDEX
 
             cur_len += round_len
-        target[cur_len:] = IGNORE_INDEX
+        target[cur_len:] = constants.IGNORE_INDEX
 
         if cur_len < tokenizer.model_max_length:
             if cur_len != total_len:
-                target[:] = IGNORE_INDEX
+                target[:] = constants.IGNORE_INDEX
                 print(
                     f"WARNING: tokenization mismatch: {cur_len} vs. {total_len}."
                     f" (ignored)"
@@ -396,20 +392,26 @@ def preprocess_qwen(
     sources,
     tokenizer: transformers.PreTrainedTokenizer,
     has_image: bool = False,
-    max_len=2048,
-    system_message: str = "You are a helpful assistant.",
+    max_len: Optional[int] = None,
+    system_message: Optional[str] = None,
 ) -> Dict:
     # roles = {"human": "<|im_start|>user", "gpt": "<|im_start|>assistant"}
     roles = {"human": "user", "gpt": "assistant"}
 
+    if system_message is None:
+        system_message = get_config().prompts.qwen_system_message
+    if max_len is None:
+        max_len = get_config().training.model_max_length
+
     # Add image tokens to tokenizer as a special tokens
     # Use a deepcopy of tokenizer so that we don't modify on the tokenizer
     tokenizer = copy.deepcopy(tokenizer)
+    tokenizer.model_max_length = max_len
     # When there is actually an image, we add the image tokens as a special token
     if has_image:
-        tokenizer.add_tokens(["<image>"], special_tokens=True)
+        tokenizer.add_tokens([constants.DEFAULT_IMAGE_TOKEN], special_tokens=True)
 
-    image_token_index = tokenizer.convert_tokens_to_ids("<image>")
+    image_token_index = tokenizer.convert_tokens_to_ids(constants.DEFAULT_IMAGE_TOKEN)
     im_start, im_end = (
         tokenizer.additional_special_tokens_ids[0],
         tokenizer.additional_special_tokens_ids[1],
@@ -441,7 +443,7 @@ def preprocess_qwen(
         input_id += tokenizer.apply_chat_template(
             [{"role": "system", "content": system_message}]
         )
-        target += [IGNORE_INDEX] * len(input_id)
+        target += [constants.IGNORE_INDEX] * len(input_id)
 
         for conv in source:
             # Make sure llava data can load
@@ -458,7 +460,7 @@ def preprocess_qwen(
             encode_id = tokenizer.apply_chat_template(conv)
             input_id += encode_id
             if role in ["user", "system"]:
-                target += [IGNORE_INDEX] * len(encode_id)
+                target += [constants.IGNORE_INDEX] * len(encode_id)
             else:
                 target += encode_id
 
@@ -470,7 +472,7 @@ def preprocess_qwen(
             if encode_id in unmask_tokens_idx:
                 target[idx] = encode_id
             if encode_id == image_token_index:
-                input_id[idx] = IMAGE_TOKEN_INDEX
+                input_id[idx] = constants.IMAGE_TOKEN_INDEX
         input_ids.append(input_id)
         targets.append(target)
     input_ids = torch.tensor(input_ids, dtype=torch.long)
@@ -486,19 +488,25 @@ def preprocess_llama3(
     sources,
     tokenizer: transformers.PreTrainedTokenizer,
     has_image: bool = False,
-    max_len=2048,
-    system_message: str = "You are a helpful language and vision assistant. You are able to understand the visual content that the user provides, and assist the user with a variety of tasks using natural language.",
+    max_len: Optional[int] = None,
+    system_message: Optional[str] = None,
 ) -> Dict:
     # roles = {"human": "<|start_header_id|>user<|end_header_id|>", "gpt": "<|start_header_id|>assistant<|end_header_id|>"}
     roles = {"human": "user", "gpt": "assistant"}
 
+    if system_message is None:
+        system_message = get_config().prompts.llama3_system_message
+    if max_len is None:
+        max_len = get_config().training.model_max_length
+
     # Add image tokens to tokenizer as a special tokens
     # Use a deepcopy of tokenizer so that we don't modify on the tokenizer
     tokenizer = copy.deepcopy(tokenizer)
+    tokenizer.model_max_length = max_len
     # When there is actually an image, we add the image tokens as a special token
     if has_image:
-        tokenizer.add_tokens(["<image>"], special_tokens=True)
-    image_token_index = tokenizer.convert_tokens_to_ids("<image>")
+        tokenizer.add_tokens([constants.DEFAULT_IMAGE_TOKEN], special_tokens=True)
+    image_token_index = tokenizer.convert_tokens_to_ids(constants.DEFAULT_IMAGE_TOKEN)
 
     unmask_tokens = [
         "<|begin_of_text|>",
@@ -525,7 +533,7 @@ def preprocess_llama3(
         input_id += tokenizer.apply_chat_template(
             [{"role": "system", "content": system_message}]
         )
-        target += [IGNORE_INDEX] * len(input_id)
+        target += [constants.IGNORE_INDEX] * len(input_id)
 
         for conv in source:
             # Make sure llava data can load
@@ -545,7 +553,7 @@ def preprocess_llama3(
             encode_id = tokenizer.apply_chat_template(conv)[1:]
             input_id += encode_id
             if role in ["user", "system"]:
-                target += [IGNORE_INDEX] * len(encode_id)
+                target += [constants.IGNORE_INDEX] * len(encode_id)
             else:
                 target += encode_id
 
@@ -556,7 +564,7 @@ def preprocess_llama3(
             if encode_id in unmask_tokens_idx:
                 target[idx] = encode_id
             if encode_id == image_token_index:
-                input_id[idx] = IMAGE_TOKEN_INDEX
+                input_id[idx] = constants.IMAGE_TOKEN_INDEX
         input_ids.append(input_id)
         targets.append(target)
     input_ids = torch.tensor(input_ids, dtype=torch.long)
@@ -576,8 +584,8 @@ def preprocess_plain(
     conversations = []
     for source in sources:
         assert len(source) == 2
-        assert DEFAULT_IMAGE_TOKEN in source[0]["value"]
-        source[0]["value"] = DEFAULT_IMAGE_TOKEN
+        assert constants.DEFAULT_IMAGE_TOKEN in source[0]["value"]
+        source[0]["value"] = constants.DEFAULT_IMAGE_TOKEN
         conversation = (
             source[0]["value"]
             + source[1]["value"]
@@ -592,7 +600,7 @@ def preprocess_plain(
     targets = copy.deepcopy(input_ids)
     for target, source in zip(targets, sources):
         tokenized_len = len(tokenizer_image_token(source[0]["value"], tokenizer))
-        target[:tokenized_len] = IGNORE_INDEX
+        target[:tokenized_len] = constants.IGNORE_INDEX
 
     return dict(input_ids=input_ids, labels=targets)
 
@@ -607,7 +615,7 @@ def preprocess(
     1. Add signal '### ' at the beginning each sentence, with end signal '\n';
     2. Concatenate conversations together;
     3. Tokenize the concatenated conversation;
-    4. Make a deepcopy as the target. Mask human words with IGNORE_INDEX.
+    4. Make a deepcopy as the target. Mask human words with constants.IGNORE_INDEX.
     """
     if (
         conversation_lib.default_conversation.sep_style
@@ -801,7 +809,7 @@ class DataCollatorForSupervisedDataset(object):
         input_ids = self.pad_sequence(
             input_ids, batch_first=True, padding_value=self.tokenizer.pad_token_id
         )
-        labels = self.pad_sequence(labels, batch_first=True, padding_value=IGNORE_INDEX)
+        labels = self.pad_sequence(labels, batch_first=True, padding_value=constants.IGNORE_INDEX)
 
         batch = dict(
             input_ids=input_ids,

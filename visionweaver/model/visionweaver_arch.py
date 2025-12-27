@@ -18,14 +18,7 @@ from abc import ABC, abstractmethod
 import torch
 import torch.nn as nn
 
-from visionweaver.constants import (
-    DEFAULT_IM_END_TOKEN,
-    DEFAULT_IM_START_TOKEN,
-    DEFAULT_IMAGE_PATCH_TOKEN,
-    IGNORE_INDEX,
-    IMAGE_TOKEN_INDEX,
-    UNK_INDEX,
-)
+from visionweaver import constants
 from visionweaver.mm_utils import get_anyres_image_grid_shape
 from visionweaver.utils import rank0_print
 
@@ -82,7 +75,6 @@ class VisionWeaverMetaModel:
         self.config.mm_vision_select_layer = model_args.mm_vision_select_layer
         self.config.mm_vision_select_feature = model_args.mm_vision_select_feature
         self.config.mm_patch_merge_type = model_args.mm_patch_merge_type
-        self.config.mm_version = model_args.mm_version
         # self.config.num_experts = model_args.num_experts
         self.config.clip_hr = model_args.clip_hr
         self.config.freeze_vision_tower = model_args.freeze_vision_tower
@@ -243,7 +235,7 @@ class VisionWeaverMetaForCausalLM(ABC):
         if position_ids is None:
             position_ids = torch.arange(0, input_ids.shape[1], dtype=torch.long, device=input_ids.device)
         if labels is None:
-            labels = torch.full_like(input_ids, IGNORE_INDEX)
+            labels = torch.full_like(input_ids, constants.IGNORE_INDEX)
 
         # remove the padding using attention_mask -- FIXME
         _input_ids = input_ids
@@ -254,7 +246,7 @@ class VisionWeaverMetaForCausalLM(ABC):
         new_labels = []
         cur_image_idx = 0
         for batch_idx, cur_input_ids in enumerate(input_ids):
-            num_images = (cur_input_ids == IMAGE_TOKEN_INDEX).sum()
+            num_images = (cur_input_ids == constants.IMAGE_TOKEN_INDEX).sum()
             if num_images == 0:
                 cur_image_features = image_features[cur_image_idx]
                 cur_input_embeds_1 = self.get_model().embed_tokens(cur_input_ids)
@@ -264,7 +256,7 @@ class VisionWeaverMetaForCausalLM(ABC):
                 cur_image_idx += 1
                 continue
 
-            image_token_indices = [-1] + torch.where(cur_input_ids == IMAGE_TOKEN_INDEX)[0].tolist() + [cur_input_ids.shape[0]]
+            image_token_indices = [-1] + torch.where(cur_input_ids == constants.IMAGE_TOKEN_INDEX)[0].tolist() + [cur_input_ids.shape[0]]
             cur_input_ids_noim = []
             cur_labels = labels[batch_idx]
             cur_labels_noim = []
@@ -284,7 +276,7 @@ class VisionWeaverMetaForCausalLM(ABC):
                     cur_image_features = image_features[cur_image_idx]
                     cur_image_idx += 1
                     cur_new_input_embeds.append(cur_image_features)
-                    cur_new_labels.append(torch.full((cur_image_features.shape[0],), IGNORE_INDEX, device=cur_labels.device, dtype=cur_labels.dtype))
+                    cur_new_labels.append(torch.full((cur_image_features.shape[0],), constants.IGNORE_INDEX, device=cur_labels.device, dtype=cur_labels.dtype))
 
             cur_new_input_embeds = [x.to(self.device) for x in cur_new_input_embeds]
 
@@ -305,7 +297,7 @@ class VisionWeaverMetaForCausalLM(ABC):
         batch_size = len(new_input_embeds)
 
         new_input_embeds_padded = []
-        new_labels_padded = torch.full((batch_size, max_len), IGNORE_INDEX, dtype=new_labels[0].dtype, device=new_labels[0].device)
+        new_labels_padded = torch.full((batch_size, max_len), constants.IGNORE_INDEX, dtype=new_labels[0].dtype, device=new_labels[0].device)
         attention_mask = torch.zeros((batch_size, max_len), dtype=attention_mask.dtype, device=attention_mask.device)
         position_ids = torch.zeros((batch_size, max_len), dtype=position_ids.dtype, device=position_ids.device)
 
@@ -349,11 +341,11 @@ class VisionWeaverMetaForCausalLM(ABC):
 
     def initialize_vision_tokenizer(self, model_args, tokenizer):
         if model_args.mm_use_im_patch_token:
-            tokenizer.add_tokens([DEFAULT_IMAGE_PATCH_TOKEN], special_tokens=True)
+            tokenizer.add_tokens([constants.DEFAULT_IMAGE_PATCH_TOKEN], special_tokens=True)
             self.resize_token_embeddings(len(tokenizer))
 
         if model_args.mm_use_im_start_end:
-            num_new_tokens = tokenizer.add_tokens([DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN], special_tokens=True)
+            num_new_tokens = tokenizer.add_tokens([constants.DEFAULT_IM_START_TOKEN, constants.DEFAULT_IM_END_TOKEN], special_tokens=True)
             self.resize_token_embeddings(len(tokenizer))
 
             if num_new_tokens > 0:
@@ -391,6 +383,6 @@ class VisionWeaverMetaForCausalLM(ABC):
 
     def get_pure_input(self, input_ids):
         pure_input_ids = input_ids.clone()
-        pure_input_ids[pure_input_ids == IMAGE_TOKEN_INDEX] = UNK_INDEX
+        pure_input_ids[pure_input_ids == constants.IMAGE_TOKEN_INDEX] = constants.UNK_INDEX
 
         return pure_input_ids

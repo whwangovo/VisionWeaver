@@ -1,0 +1,48 @@
+defaults:
+  - train
+  - _self_
+
+model:
+  model_name_or_path: "checkpoints/Qwen/Qwen2.5-3B-Instruct"
+  vision_tower: "convnext;eva;sam;vary;dino"
+  version: "qwen"
+  pretrain_mm_mlp_adapter: "outputs/pretrain_outputs/dromo-ccesvd-qwen-v2-pretrain/mm_projector.bin"
+  mm_projector_type: "mlp2x_gelu"
+  mm_tunable_parts: "dromo_stage_2"
+  mm_vision_select_layer: -2
+  mm_vision_select_feature: "cls_patch"
+  mm_use_im_start_end: false
+  mm_use_im_patch_token: false
+
+data:
+  data_path: "playground/LLaVA-Finetune/llava_v1_5_mix665k.json"
+  image_folder: "playground/LLaVA-Finetune"
+  image_aspect_ratio: "pad"
+  lazy_preprocess: true
+
+training:
+  output_dir: "outputs/finetune_outputs/dromo-ccesvd-qwen-finetune"
+  run_name: "dromo-ccesvd-qwen-finetune"
+  bf16: true
+  group_by_modality_length: true
+  num_train_epochs: 1
+  per_device_train_batch_size: 8
+  per_device_eval_batch_size: 4
+  gradient_accumulation_steps: 2
+  eval_strategy: "no"
+  save_strategy: "no"
+  save_steps: 50000
+  save_total_limit: 1
+  learning_rate: 2e-5
+  weight_decay: 0.0
+  warmup_ratio: 0.03
+  lr_scheduler_type: "cosine"
+  logging_steps: 1
+  tf32: true
+  model_max_length: 2048
+  gradient_checkpointing: true
+  dataloader_num_workers: 4
+  report_to: "wandb"
+  verbose_logging: true
+  attn_implementation: "sdpa"
+  deepspeed: "scripts/zero3.json"

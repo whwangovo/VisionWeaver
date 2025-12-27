@@ -9,6 +9,9 @@ from typing import Any, Dict, List, Tuple, Union
 from PIL import Image
 from transformers import AutoTokenizer
 
+from visionweaver import constants
+from visionweaver.config import get_config
+
 
 class SeparatorStyle(Enum):
     """Different separator style."""
@@ -53,13 +56,22 @@ class Conversation:
             init_role, init_msg = messages[0].copy()
             init_msg = init_msg[0]
             if "mmtag" in self.version:
-                init_msg = init_msg.replace("<image>", "").strip()
+                init_msg = init_msg.replace(constants.DEFAULT_IMAGE_TOKEN, "").strip()
                 messages[0] = (init_role, init_msg)
-                messages.insert(0, (self.roles[0], "<Image><image></Image>"))
+                messages.insert(
+                    0,
+                    (
+                        self.roles[0],
+                        f"<Image>{constants.DEFAULT_IMAGE_TOKEN}</Image>",
+                    ),
+                )
                 messages.insert(1, (self.roles[1], "Received."))
-            elif not init_msg.startswith("<image>"):
-                init_msg = init_msg.replace("<image>", "").strip()
-                messages[0] = (init_role, "<image>\n" + init_msg)
+            elif not init_msg.startswith(constants.DEFAULT_IMAGE_TOKEN):
+                init_msg = init_msg.replace(constants.DEFAULT_IMAGE_TOKEN, "").strip()
+                messages[0] = (
+                    init_role,
+                    f"{constants.DEFAULT_IMAGE_TOKEN}\n{init_msg}",
+                )
             else:
                 messages[0] = (init_role, init_msg)
 
@@ -90,7 +102,7 @@ class Conversation:
                 if message:
                     if type(message) is tuple:
                         message, images, _ = message
-                        message = "<image>" * len(images) + message
+                        message = constants.DEFAULT_IMAGE_TOKEN * len(images) + message
                     ret += role + "\n" + message + self.sep + "\n"
                 else:
                     ret += role + "\n"
@@ -112,7 +124,7 @@ class Conversation:
                     # TODO: why?
                     if type(message) is tuple:
                         message, images = message
-                        message = "<image>" * len(images) + message
+                        message = constants.DEFAULT_IMAGE_TOKEN * len(images) + message
                     chat_template_messages.append({"role": role, "content": message})
 
             # print(chat_template_messages)
@@ -252,11 +264,11 @@ class Conversation:
         return images
 
     def is_image_file(self, filename):
-        image_extensions = [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".webp"]
+        image_extensions = get_config().media.image_extensions
         return any(filename.lower().endswith(ext) for ext in image_extensions)
 
     def is_video_file(self, filename):
-        video_extensions = [".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".mpeg", ".mpg"]
+        video_extensions = get_config().media.video_extensions
         return any(filename.lower().endswith(ext) for ext in video_extensions)
 
     def to_gradio_chatbot(self):
@@ -268,9 +280,15 @@ class Conversation:
                     if type(image) != list:
                         image = [image]
                     if len(image) == 1:
-                        msg = "<image>\n" + msg.replace("<image>", "").strip()
+                        msg = (
+                            f"{constants.DEFAULT_IMAGE_TOKEN}\n"
+                            + msg.replace(constants.DEFAULT_IMAGE_TOKEN, "").strip()
+                        )
                     else:
-                        msg = re.sub(r"(<image>)\n(?=<image>)", r"\1 ", msg)
+                        escaped_token = re.escape(constants.DEFAULT_IMAGE_TOKEN)
+                        msg = re.sub(
+                            rf"({escaped_token})\n(?={escaped_token})", r"\1 ", msg
+                        )
 
                     img_str_list = []                         
                     for img in image:
@@ -594,7 +612,9 @@ conv_templates = {
 if __name__ == "__main__":
     # conv = conv_llava_llama_3
     conv = conv_qwen
-    conv.append_message(conv.roles[0], "<image>\nDescribe the image:")
+    conv.append_message(
+        conv.roles[0], f"{constants.DEFAULT_IMAGE_TOKEN}\nDescribe the image:"
+    )
     conv.append_message(conv.roles[1], "a cat.")
     conv.append_message(conv.roles[0], "What is the cat doing?")
     conv.append_message(conv.roles[1], "sleeping.")
