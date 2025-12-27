@@ -4,7 +4,9 @@ from typing import Optional, Tuple, Union
 import torch
 import torch.nn.functional as F
 from torch import nn
-from transformers import CLIPImageProcessor, SamModel, SamProcessor, SamVisionConfig
+from transformers import SamModel, SamProcessor, SamVisionConfig
+
+from .utils import load_clip_image_processor, log_already_loaded, require_config_value
 
 
 def forward_patch_embeddings(self, pixel_values):
@@ -112,7 +114,7 @@ class SAMVisionTower(nn.Module):
 
     def load_model(self):
         if self.is_loaded:
-            print('{} is already loaded, `load_model` called again, skipping.'.format(self.vision_tower_name))
+            log_already_loaded(self.vision_tower_name)
             return
         
         # self.image_processor = CLIPImageProcessor(
@@ -137,10 +139,7 @@ class SAMVisionTower(nn.Module):
         # }
         
         # print("input_image_size", input_image_size)
-        image_processor_name = getattr(self.args, "vision_image_processor", None)
-        if not image_processor_name:
-            raise ValueError("vision_image_processor must be set in the config.")
-        self.image_processor = CLIPImageProcessor.from_pretrained(image_processor_name)
+        self.image_processor = load_clip_image_processor(self.args)
         self.vision_tower = SamModel.from_pretrained(self.vision_tower_name).vision_encoder
         # sam_model.neck = ShortSamVisionNeck(sam_model.config)
         self.sam_model_config = self.vision_tower.config
@@ -159,7 +158,7 @@ class SAMVisionTower(nn.Module):
         self.is_loaded = True
 
     def forward(self, images):
-        if type(images) is list:
+        if isinstance(images, list):
             image_features = []
             for image in images:
                 image_feature = self.vision_tower(image.to(device=self.device, dtype=self.dtype).unsqueeze(0))
@@ -194,11 +193,9 @@ class SAMVisionTower(nn.Module):
     @property
     def hidden_size(self):
         hidden_size = getattr(self.sam_model_config, "hidden_size", None)
-        if hidden_size is None:
-            hidden_size = getattr(self.args, "sam_hidden_size", None)
-        if hidden_size is None:
-            raise ValueError("sam_hidden_size must be set in the config.")
-        return hidden_size
+        if hidden_size is not None:
+            return hidden_size
+        return require_config_value(self.args, "sam_hidden_size")
 
     @property
     def num_patches(self):

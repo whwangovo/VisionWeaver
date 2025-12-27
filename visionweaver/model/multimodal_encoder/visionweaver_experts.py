@@ -11,6 +11,7 @@ from .eva_encoder import EVAVisionTower
 from .pix2struct_encoder import Pix2StructVisionTower
 from .sam_encoder import SAMVisionTower
 from .vary_encoder import VaryVisionTower
+from .utils import require_config_value
 
 
 class VisionExperts(nn.Module):
@@ -18,20 +19,12 @@ class VisionExperts(nn.Module):
         super().__init__()
 
         self.is_loaded = False
-        self.input_image_size = getattr(config, "image_size", None)
-        if self.input_image_size is None:
-            raise ValueError("image_size must be set in the config.")
-        self.patch_size = getattr(config, "patch_size", None)
-        if self.patch_size is None:
-            raise ValueError("patch_size must be set in the config.")
+        self.input_image_size = require_config_value(config, "image_size")
+        self.patch_size = require_config_value(config, "patch_size")
         self.num_grids = self.input_image_size // self.patch_size
         self.num_tokens = self.num_grids**2
-        self.hidden_size = getattr(config, "mm_hidden_size", None)
-        if self.hidden_size is None:
-            raise ValueError("mm_hidden_size must be set in the config.")
-        self.freeze_vision = getattr(config, "freeze_vision_tower", None)
-        if self.freeze_vision is None:
-            raise ValueError("freeze_vision_tower must be set in the config.")
+        self.hidden_size = require_config_value(config, "mm_hidden_size")
+        self.freeze_vision = require_config_value(config, "freeze_vision_tower")
 
         vision_tower_name_list = getattr(
             config, "mm_vision_tower", getattr(config, "vision_tower", None)

@@ -1,10 +1,9 @@
-import timm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformers import CLIPImageProcessor
 
 from .vision_models.convnext import convnext_xxlarge
+from .utils import load_clip_image_processor, log_already_loaded, require_config_value
 
 
 class ConvNextVisionTower(nn.Module):
@@ -25,7 +24,7 @@ class ConvNextVisionTower(nn.Module):
 
     def load_model(self):
         if self.is_loaded:
-            print('{} is already loaded, `load_model` called again, skipping.'.format(self.vision_tower_name))
+            log_already_loaded(self.vision_tower_name)
             return
         
         # self.image_processor = CLIPImageProcessor(
@@ -38,10 +37,7 @@ class ConvNextVisionTower(nn.Module):
         #         },
         #     image_mean=[0.48145466, 0.4578275, 0.40821073],
         #     image_std=[0.26862954, 0.26130258, 0.27577711],)
-        image_processor_name = getattr(self.args, "vision_image_processor", None)
-        if not image_processor_name:
-            raise ValueError("vision_image_processor must be set in the config.")
-        self.image_processor = CLIPImageProcessor.from_pretrained(image_processor_name)
+        self.image_processor = load_clip_image_processor(self.args)
         self.vision_tower = convnext_xxlarge(self.vision_tower_name)
         # self.vision_tower  = timm.create_model(self.vision_tower_name, pretrained=True)
 
@@ -95,17 +91,11 @@ class ConvNextVisionTower(nn.Module):
 
     @property
     def num_attention_heads(self):
-        value = getattr(self.args, "convnext_num_attention_heads", None)
-        if value is None:
-            raise ValueError("convnext_num_attention_heads must be set in the config.")
-        return value
+        return require_config_value(self.args, "convnext_num_attention_heads")
     
     @property
     def num_layers(self):
-        value = getattr(self.args, "convnext_num_layers", None)
-        if value is None:
-            raise ValueError("convnext_num_layers must be set in the config.")
-        return value
+        return require_config_value(self.args, "convnext_num_layers")
     
     @property
     def hidden_size(self):

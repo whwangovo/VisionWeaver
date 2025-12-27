@@ -3,11 +3,15 @@ import warnings
 from collections import OrderedDict
 
 import torch
-from PIL import Image
 from torch import nn
-from transformers import CLIPImageProcessor
-
-from visionweaver.model.multimodal_encoder.vision_models.eva_vit import build_eva_vit
+from visionweaver.model.multimodal_encoder.hf_utils import resolve_checkpoint_path
+from visionweaver.model.multimodal_encoder.utils import (
+    load_clip_image_processor,
+    log_already_loaded,
+)
+from visionweaver.model.multimodal_encoder.vision_models.eva_vit_builder import (
+    build_eva_vit,
+)
 
 
 class EVAVisionTower(nn.Module):
@@ -32,7 +36,7 @@ class EVAVisionTower(nn.Module):
 
     def load_model(self):
         if self.is_loaded:
-            print('{} is already loaded, `load_model` called again, skipping.'.format(self.vision_tower_name))
+            log_already_loaded(self.vision_tower_name)
             return
 
         # # hardcode
@@ -45,10 +49,7 @@ class EVAVisionTower(nn.Module):
         #                                     image_std=[0.26862954, 0.26130258, 0.27577711])
 
         # load weights
-        image_processor_name = getattr(self.args, "vision_image_processor", None)
-        if not image_processor_name:
-            raise ValueError("vision_image_processor must be set in the config.")
-        self.image_processor = CLIPImageProcessor.from_pretrained(image_processor_name)
+        self.image_processor = load_clip_image_processor(self.args)
         self.vision_tower, self.config = build_eva_vit(model_name=self.vision_tower_name, image_size=self.input_image_size)
         self.load_vision_checkpoint()
         # self.vision_tower.config = vision_tower_config
@@ -59,12 +60,19 @@ class EVAVisionTower(nn.Module):
         self.is_loaded = True
     
     def load_vision_checkpoint(self):
-        if not os.path.exists(self.vision_tower_name):
-            warnings.warn("The vision tower weights for EVA-02 vision tower does not exists, this will cause problem if you are training the model from scratch!")
+        checkpoint_filename = getattr(self.args, "checkpoint_filename", None)
+        checkpoint_path = resolve_checkpoint_path(
+            self.vision_tower_name, filename=checkpoint_filename
+        )
+        if not checkpoint_path or not os.path.exists(checkpoint_path):
+            warnings.warn(
+                "The vision tower weights for EVA-02 do not exist; training from "
+                "scratch will likely fail."
+            )
             self.is_loaded = True
             return 
         
-        pretrained_params = torch.load(self.vision_tower_name, weights_only=True)
+        pretrained_params = torch.load(checkpoint_path, weights_only=True)
         if 'ema_state' in pretrained_params:
             pretrained_params = pretrained_params['ema_state']
         elif 'module' in pretrained_params:

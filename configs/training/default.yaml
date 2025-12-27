@@ -1,45 +1,44 @@
-training:
-  output_dir: "outputs"
-  cache_dir: null
-  deepspeed: null
-  optim: "adamw_torch"
-  remove_unused_columns: false
-  freeze_mm_mlp_adapter: false
-  mpt_attn_impl: "triton"
-  model_max_length: 2048
-  double_quant: true
-  quant_type: "nf4"
-  bits: 16
-  lora_enable: false
-  lora_r: 64
-  lora_alpha: 16
-  lora_dropout: 0.05
-  lora_weight_path: ""
-  lora_bias: "none"
-  mm_projector_lr: null
-  group_by_modality_length: false
-  auto_find_batch_size: false
-  gradient_accumulation_steps: 1
-  gradient_checkpointing: true
-  verbose_logging: false
-  tf32: false
-  attn_implementation: "flash_attention_2"
-  per_device_train_batch_size: 1
-  per_device_eval_batch_size: 1
-  num_train_epochs: 1
-  learning_rate: 5.0e-5
-  weight_decay: 0.0
-  warmup_ratio: 0.0
-  lr_scheduler_type: "cosine"
-  logging_steps: 10
-  save_steps: 500
-  save_total_limit: 2
-  eval_strategy: "no"
-  save_strategy: "steps"
-  run_name: ""
-  report_to: "none"
-  dataloader_num_workers: 0
-  bf16: false
-  fp16: false
-  local_rank: -1
-  fsdp: ""
+output_dir: "outputs"
+cache_dir: null
+deepspeed: null
+optim: "adamw_torch"
+remove_unused_columns: false
+freeze_mm_mlp_adapter: false
+mpt_attn_impl: "triton"
+model_max_length: 2048
+double_quant: true
+quant_type: "nf4"
+bits: 16
+lora_enable: false
+lora_r: 64
+lora_alpha: 16
+lora_dropout: 0.05
+lora_weight_path: ""
+lora_bias: "none"
+mm_projector_lr: null
+group_by_modality_length: false
+auto_find_batch_size: false
+gradient_accumulation_steps: 1
+gradient_checkpointing: true
+verbose_logging: false
+tf32: false
+attn_implementation: "flash_attention_2"
+per_device_train_batch_size: 1
+per_device_eval_batch_size: 1
+num_train_epochs: 1
+learning_rate: 5.0e-5
+weight_decay: 0.0
+warmup_ratio: 0.0
+lr_scheduler_type: "cosine"
+logging_steps: 10
+save_steps: 500
+save_total_limit: 2
+eval_strategy: "no"
+save_strategy: "steps"
+run_name: ""
+report_to: "none"
+dataloader_num_workers: 0
+bf16: false
+fp16: false
+local_rank: -1
+fsdp: ""

@@ -281,10 +281,10 @@ def train(cfg: DictConfig):
     data_module = make_supervised_data_module(tokenizer=tokenizer, data_args=data_args)
 
     if training_args.verbose_logging:
-        rank0_print(f"Inspecting experiment hyperparameters:\n")
-        rank0_print(f"model_args = {vars(model_args)}\n\n")
-        rank0_print(f"data_args = {vars(data_args)}\n\n")
-        rank0_print(f"training_args = {vars(training_args)}\n\n")
+        # rank0_print(f"Inspecting experiment hyperparameters:\n")
+        # rank0_print(f"model_args = {vars(model_args)}\n\n")
+        # rank0_print(f"data_args = {vars(data_args)}\n\n")
+        # rank0_print(f"training_args = {vars(training_args)}\n\n")
         print_trainable_params(model)
         # print_config(model.config)
 

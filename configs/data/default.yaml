@@ -1,6 +1,5 @@
-data:
-  data_path: null
-  lazy_preprocess: false
-  is_multimodal: false
-  image_folder: null
-  image_aspect_ratio: "square"
+data_path: null
+lazy_preprocess: false
+is_multimodal: false
+image_folder: null
+image_aspect_ratio: "square"

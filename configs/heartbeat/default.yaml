@@ -1,3 +1,2 @@
-heartbeat:
-  controller_expiration: 30
-  worker_interval: 15
+controller_expiration: 30
+worker_interval: 15

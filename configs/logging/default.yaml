@@ -1,2 +1,1 @@
-logging:
-  log_dir: "."
+log_dir: "."

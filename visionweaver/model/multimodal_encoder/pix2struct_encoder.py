@@ -14,22 +14,15 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import re
-from email.mime import image
-
-import requests
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from PIL import Image
 from transformers import (
-    AutoModel,
     AutoProcessor,
-    CLIPImageProcessor,
     Pix2StructForConditionalGeneration,
-    Pix2StructProcessor,
-    Pix2StructVisionModel,
 )
+
+from .utils import load_clip_image_processor, log_already_loaded, require_config_value
 
 
 class Pix2StructVisionTower(nn.Module):
@@ -58,13 +51,10 @@ class Pix2StructVisionTower(nn.Module):
 
     def load_model(self):
         if self.is_loaded:
-            print('{} is already loaded, `load_model` called again, skipping.'.format(self.vision_tower_name))
+            log_already_loaded(self.vision_tower_name)
             return
         
-        image_processor_name = getattr(self.args, "vision_image_processor", None)
-        if not image_processor_name:
-            raise ValueError("vision_image_processor must be set in the config.")
-        self.image_processor = CLIPImageProcessor.from_pretrained(image_processor_name)
+        self.image_processor = load_clip_image_processor(self.args)
         whole_model = Pix2StructForConditionalGeneration.from_pretrained(self.vision_tower_name)
         self.vision_tower = whole_model.encoder
         self.pix2struct_processor = AutoProcessor.from_pretrained(self.vision_tower_name)
@@ -144,11 +134,9 @@ class Pix2StructVisionTower(nn.Module):
         hidden_size = getattr(self.vision_tower.config, "hidden_size", None)
         if hidden_size is None and isinstance(self.vision_tower.config, dict):
             hidden_size = self.vision_tower.config.get("hidden_size")
-        if hidden_size is None:
-            hidden_size = getattr(self.args, "pix2struct_hidden_size", None)
-        if hidden_size is None:
-            raise ValueError("pix2struct_hidden_size must be set in the config.")
-        return hidden_size
+        if hidden_size is not None:
+            return hidden_size
+        return require_config_value(self.args, "pix2struct_hidden_size")
 
     @property
     def num_patches(self):

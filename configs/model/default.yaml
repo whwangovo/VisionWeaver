@@ -1,62 +1,62 @@
-model:
-  model_name_or_path: "facebook/opt-125m"
-  vision_tower: null
-  mm_tunable_parts: null
-  freeze_backbone: false
-  freeze_vision_tower: true
-  tune_mm_mlp_adapter: false
-  tune_vision_adapter: false
-  pretrain_mm_mlp_adapter: null
-  clip_hr: false
-  image_size: 336
-  patch_size: 14
-  num_experts: 0
-  version: "v0"
-  mm_vision_select_layer: -1
-  mm_projector_type: "linear"
-  mm_use_im_start_end: false
-  mm_use_im_patch_token: true
-  mm_patch_merge_type: "flat"
-  mm_vision_select_feature: "patch"
-  base_vision_tower: "openai/clip-vit-large-patch14-336"
-  vision_image_processor: "openai/clip-vit-large-patch14-336"
-  convnext_hidden_size_map:
-    "-2": 1536
-    "-1": 3072
-  convnext_num_attention_heads: 16
-  convnext_num_layers: 4
-  dino_num_patches: 256
-  pix2struct_hidden_size: 1536
-  sam_hidden_size: 1024
-  vary_hidden_size: 1024
-  vision_expert_registry:
-    eva:
-      path: "Yuxin-CV/EVA-02/eva02/det/eva02_L_coco_det_sys_o365.pth"
-      args: {}
-    convnext:
-      path: "convnext_xxlarge.clip_laion2b_soup"
-      args: {}
-    sam:
-      path: "facebook/sam-vit-large"
-      args: {}
-    pix2struct:
-      path: "google/pix2struct-large"
-      args:
-        do_resize: true
-        de_normalize: true
-    vary:
-      path: "HaoranWei/Vary-toy"
-      args: {}
-    dino:
-      path: "facebook/dinov2-large"
-      args:
-        mm_vision_select_layer: -2
-  input_image_size: 336
-  do_resize: true
-  de_normalize: true
-  pix2struct_max_tokens: 2025
-  pix2struct_grid_size: 45
-  pix2struct_resize_size: [32, 32]
-  unfreeze_mm_vision_tower: false
-  s2_scales: "336,672,1008"
-  add_pixel_shuffle: false
+model_name_or_path: "facebook/opt-125m"
+vision_tower: null
+mm_tunable_parts: null
+freeze_backbone: false
+freeze_vision_tower: true
+tune_mm_mlp_adapter: false
+tune_vision_adapter: false
+pretrain_mm_mlp_adapter: null
+clip_hr: false
+image_size: 336
+patch_size: 14
+num_experts: 0
+version: "v0"
+mm_vision_select_layer: -1
+mm_projector_type: "linear"
+mm_use_im_start_end: false
+mm_use_im_patch_token: true
+mm_patch_merge_type: "flat"
+mm_vision_select_feature: "patch"
+base_vision_tower: "openai/clip-vit-large-patch14-336"
+vision_image_processor: "openai/clip-vit-large-patch14-336"
+convnext_hidden_size_map:
+  "-2": 1536
+  "-1": 3072
+convnext_num_attention_heads: 16
+convnext_num_layers: 4
+dino_num_patches: 256
+pix2struct_hidden_size: 1536
+sam_hidden_size: 1024
+vary_hidden_size: 1024
+vision_expert_registry:
+  eva:
+    path: "Yuxin-CV/EVA-02/eva02/det/eva02_L_coco_det_sys_o365.pth"
+    args: {}
+  convnext:
+    path: "convnext_xxlarge.clip_laion2b_soup"
+    args: {}
+  sam:
+    path: "facebook/sam-vit-large"
+    args: {}
+  pix2struct:
+    path: "google/pix2struct-large"
+    args:
+      do_resize: true
+      de_normalize: true
+  vary:
+    path: "HaoranWei/Vary-toy"
+    args:
+      checkpoint_filename: "pytorch_model.bin"
+  dino:
+    path: "facebook/dinov2-large"
+    args:
+      mm_vision_select_layer: -2
+input_image_size: 336
+do_resize: true
+de_normalize: true
+pix2struct_max_tokens: 2025
+pix2struct_grid_size: 45
+pix2struct_resize_size: [32, 32]
+unfreeze_mm_vision_tower: false
+s2_scales: "336,672,1008"
+add_pixel_shuffle: false

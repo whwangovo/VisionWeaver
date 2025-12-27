@@ -1,3 +1,2 @@
-tokenizer:
-  use_fast: false
-  padding_side: "right"
+use_fast: false
+padding_side: "right"

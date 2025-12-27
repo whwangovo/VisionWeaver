@@ -1,11 +1,8 @@
 import torch
 import torch.nn as nn
-from transformers import (
-    CLIPImageProcessor,
-    CLIPVisionConfig,
-    CLIPVisionModel,
-    Dinov2Model,
-)
+from transformers import CLIPVisionConfig, Dinov2Model
+
+from .utils import load_clip_image_processor, log_already_loaded, require_config_value
 
 
 class DINOVisionTower(nn.Module):
@@ -32,13 +29,10 @@ class DINOVisionTower(nn.Module):
 
     def load_model(self):
         if self.is_loaded:
-            print('{} is already loaded, `load_model` called again, skipping.'.format(self.vision_tower_name))
+            log_already_loaded(self.vision_tower_name)
             return
         
-        image_processor_name = getattr(self.args, "vision_image_processor", None)
-        if not image_processor_name:
-            raise ValueError("vision_image_processor must be set in the config.")
-        self.image_processor = CLIPImageProcessor.from_pretrained(image_processor_name)
+        self.image_processor = load_clip_image_processor(self.args)
         self.vision_tower = Dinov2Model.from_pretrained(self.vision_tower_name)
 
         if self.freeze_vision:
@@ -59,7 +53,7 @@ class DINOVisionTower(nn.Module):
 
     @torch.no_grad()
     def forward(self, images):
-        if type(images) is list:
+        if isinstance(images, list):
             image_features = []
             for image in images:
                 image_forward_out = self.vision_tower(image.to(device=self.device, dtype=self.dtype).unsqueeze(0), output_hidden_states=True)
@@ -102,7 +96,4 @@ class DINOVisionTower(nn.Module):
         patch_size = getattr(self.config, "patch_size", None)
         if image_size and patch_size:
             return (image_size // patch_size) ** 2
-        num_patches = getattr(self.args, "dino_num_patches", None)
-        if num_patches is None:
-            raise ValueError("dino_num_patches must be set in the config.")
-        return num_patches
+        return require_config_value(self.args, "dino_num_patches")

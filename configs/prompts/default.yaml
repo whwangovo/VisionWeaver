@@ -1,5 +1,4 @@
-prompts:
-  qwen_system_message: "You are a helpful assistant."
-  llama3_system_message: "You are a helpful language and vision assistant. You are able to understand the visual content that the user provides, and assist the user with a variety of tasks using natural language."
-  begin_signal: "### "
-  end_signal: "\n"
+qwen_system_message: "You are a helpful assistant."
+llama3_system_message: "You are a helpful language and vision assistant. You are able to understand the visual content that the user provides, and assist the user with a variety of tasks using natural language."
+begin_signal: "### "
+end_signal: "\n"

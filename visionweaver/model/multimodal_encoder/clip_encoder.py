@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 from transformers import CLIPImageProcessor, CLIPVisionConfig, CLIPVisionModel
 
+from .utils import log_already_loaded
+
 
 class CLIPVisionTower(nn.Module):
     def __init__(self, vision_tower, args, delay_load=False):
@@ -23,7 +25,7 @@ class CLIPVisionTower(nn.Module):
 
     def load_model(self, device_map=None):
         if self.is_loaded:
-            print('{} is already loaded, `load_model` called again, skipping.'.format(self.vision_tower_name))
+            log_already_loaded(self.vision_tower_name)
             return
 
         self.image_processor = CLIPImageProcessor.from_pretrained(self.vision_tower_name)
@@ -46,7 +48,7 @@ class CLIPVisionTower(nn.Module):
 
     @torch.no_grad()
     def forward(self, images, texts=None):
-        if type(images) is list:
+        if isinstance(images, list):
             image_features = []
             for image in images:
                 image_forward_out = self.vision_tower(image.to(device=self.device, dtype=self.dtype).unsqueeze(0), output_hidden_states=True)
@@ -114,7 +116,7 @@ class CLIPVisionTowerS2(CLIPVisionTower):
 
     def load_model(self, device_map=None):
         if self.is_loaded:
-            print('{} is already loaded, `load_model` called again, skipping.'.format(self.vision_tower_name))
+            log_already_loaded(self.vision_tower_name)
             return
 
         self.image_processor = CLIPImageProcessor.from_pretrained(self.vision_tower_name)
@@ -134,7 +136,7 @@ class CLIPVisionTowerS2(CLIPVisionTower):
 
     @torch.no_grad()
     def forward(self, images):
-        if type(images) is list:
+        if isinstance(images, list):
             image_features = []
             for image in images:
                 image_feature = self.multiscale_forward(self.forward_feature, image.unsqueeze(0), img_sizes=self.s2_scales, max_split_size=self.s2_split_size)

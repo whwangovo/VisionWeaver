@@ -1,11 +1,12 @@
 import math
+import os
 from typing import Optional, Tuple, Union
 
 import torch
 import torch.nn.functional as F
 from torch import nn
-from transformers import CLIPImageProcessor, SamModel, SamProcessor, SamVisionConfig
-
+from .hf_utils import resolve_checkpoint_path
+from .utils import load_clip_image_processor, log_already_loaded
 from .vision_models.vary import build_vary
 
 
@@ -85,14 +86,19 @@ class VaryVisionTower(nn.Module):
 
     def load_model(self):
         if self.is_loaded:
-            print('{} is already loaded, `load_model` called again, skipping.'.format(self.vision_tower_name))
+            log_already_loaded(self.vision_tower_name)
             return
         
-        image_processor_name = getattr(self.args, "vision_image_processor", None)
-        if not image_processor_name:
-            raise ValueError("vision_image_processor must be set in the config.")
-        self.image_processor = CLIPImageProcessor.from_pretrained(image_processor_name)
-        self.vision_tower = build_vary(self.vision_tower_name)
+        self.image_processor = load_clip_image_processor(self.args)
+        checkpoint_filename = getattr(self.args, "checkpoint_filename", None)
+        checkpoint_path = resolve_checkpoint_path(
+            self.vision_tower_name, filename=checkpoint_filename
+        )
+        if checkpoint_path and not os.path.exists(checkpoint_path):
+            raise FileNotFoundError(
+                f"Vary checkpoint not found: {checkpoint_path}"
+            )
+        self.vision_tower = build_vary(checkpoint_path)
 
         cls_ = self.vision_tower
         bound_method = forward_vision_encoder.__get__(cls_, cls_.__class__)
@@ -104,7 +110,7 @@ class VaryVisionTower(nn.Module):
         self.is_loaded = True
 
     def forward(self, images):
-        if type(images) is list:
+        if isinstance(images, list):
             image_features = []
             for image in images:
                 image_feature = self.vision_tower(image.to(device=self.device).unsqueeze(0))
