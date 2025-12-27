@@ -174,12 +174,14 @@ class LengthGroupedSampler(Sampler):
 
 class VisionWeaverTrainer(Trainer):
 
-    def _get_train_sampler(self) -> Optional[torch.utils.data.Sampler]:
-        if self.train_dataset is None or not has_length(self.train_dataset):
+    def _get_train_sampler(self, dataset: torch.utils.data.Dataset) -> Optional[torch.utils.data.Sampler]:
+        current_dataset = dataset if dataset is not None else self.train_dataset
+        
+        if current_dataset is None or not has_length(current_dataset):
             return None
 
         if self.args.group_by_modality_length:
-            lengths = self.train_dataset.modality_lengths
+            lengths = current_dataset.modality_lengths
             return LengthGroupedSampler(
                 self.args.train_batch_size,
                 world_size=self.args.world_size * self.args.gradient_accumulation_steps,
@@ -187,7 +189,7 @@ class VisionWeaverTrainer(Trainer):
                 group_by_modality=True,
             )
         else:
-            return super()._get_train_sampler()
+            return super()._get_train_sampler(current_dataset)
 
     def create_optimizer(self):
         """
@@ -335,10 +337,10 @@ class VisionWeaverTrainer(Trainer):
                     weight_to_save, os.path.join(output_dir, f"mm_projector.bin")
                 )
         else:
-            super(LLaVATrainer, self)._save_checkpoint(model, trial, metrics)
+            super(VisionWeaverTrainer, self)._save_checkpoint(model, trial, metrics)
 
     def _save(self, output_dir: Optional[str] = None, state_dict=None):
         if getattr(self.args, "tune_mm_mlp_adapter", False):
             pass
         else:
-            super(LLaVATrainer, self)._save(output_dir, state_dict)
+            super(VisionWeaverTrainer, self)._save(output_dir, state_dict)

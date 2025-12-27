@@ -3,7 +3,7 @@ export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 export WANDB_PROJECT="hallucination"
 
 MODEL_PATH=checkpoints/Qwen/Qwen2.5-3B-Instruct
-DATA_PATH=playground/LLaVA-Pretrain
+DATA_PATH=mock/LLaVA-Pretrain
 VISION_TOWER="convnext;eva;sam;vary;dino"
 
 LLM_VERSION_CLEAN="qwen"
@@ -29,9 +29,9 @@ deepspeed train_visionweaver.py \
     --output_dir outputs/pretrain_outputs/$BASE_RUN_NAME \
     --run_name $BASE_RUN_NAME \
     --num_train_epochs 1 \
-    --per_device_train_batch_size 16 \
+    --per_device_train_batch_size 1 \
     --per_device_eval_batch_size 4 \
-    --gradient_accumulation_steps 2 \
+    --gradient_accumulation_steps 1 \
     --eval_strategy "no" \
     --save_strategy "no" \
     --save_steps 24000 \

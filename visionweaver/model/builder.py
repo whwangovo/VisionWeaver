@@ -57,7 +57,7 @@ def load_pretrained_model(
             bnb_4bit_quant_type="nf4",
         )
     else:
-        kwargs["torch_dtype"] = torch.float16
+        kwargs["dtype"] = torch.float16
 
     if "llama" in model_name.lower():
         rank0_print("Loading Llama model...")
