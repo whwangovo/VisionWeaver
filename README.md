@@ -69,9 +69,9 @@ scripts/finetune_llama_3b.sh
 
 VHBench-10 is a core contribution of our work, enabling a fine-grained diagnosis of visual perception failures in LVLMs. 
 
-- **Structure**: The dataset contains approximately 10,000 samples. Each sample is a ternary `(I, R, H)`, where `I` is the image, `R` is the real, factually accurate caption, and `H` is a caption with a specific, deliberately injected hallucination. 
+- **Structure**: The dataset contains approximately 10,00 samples. Each sample is a ternary `(I, R, H)`, where `I` is the image, `R` is the real, factually accurate caption, and `H` is a caption with a specific, deliberately injected hallucination. 
 - **Categories**: The benchmark covers 10 distinct sub-categories, including Color, Shape, Counting, Text Recognition, Relative Position, and more. 
-- **Generation**: Hallucinated captions were generated using GPT-4O-mini, guided by specialized prompts to target each sub-category. 
+- **Generation**: Hallucinated captions were generated using GPT-4o, guided by specialized prompts to target each sub-category. 
 
 The complete benchmark is available for download at our [HF repository](https://huggingface.co/datasets/KirenWH/VHBench_10).
 
