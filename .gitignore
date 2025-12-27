@@ -28,6 +28,7 @@ logs/
 wandb/
 
 # Data files
+mock
 *.json
 *.jsonl
 !**/alpaca-data-conversation.json
