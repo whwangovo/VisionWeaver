@@ -217,7 +217,7 @@ class VisionWeaverMetaForCausalLM(ABC):
             
             image_features = self.encode_images(images)
 
-        # TODO: image start / end is not implemented here to support pretraining.
+        # NOTE: image start / end tokens are not implemented here to support pretraining.
         if getattr(self.config, 'tune_mm_mlp_adapter', False) and getattr(self.config, 'mm_use_im_start_end', False):
             raise NotImplementedError
 
@@ -237,7 +237,7 @@ class VisionWeaverMetaForCausalLM(ABC):
         if labels is None:
             labels = torch.full_like(input_ids, constants.IGNORE_INDEX)
 
-        # remove the padding using attention_mask -- FIXME
+        # Filter out padding tokens using the attention mask
         _input_ids = input_ids
         input_ids = [cur_input_ids[cur_attention_mask] for cur_input_ids, cur_attention_mask in zip(input_ids, attention_mask)]
         labels = [cur_labels[cur_attention_mask] for cur_labels, cur_attention_mask in zip(labels, attention_mask)]

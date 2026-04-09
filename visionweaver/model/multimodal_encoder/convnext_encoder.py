@@ -2,20 +2,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from .base_encoder import BaseVisionTower
 from .vision_models.convnext import convnext_xxlarge
 from .utils import load_clip_image_processor, log_already_loaded, require_config_value
 
 
-class ConvNextVisionTower(nn.Module):
+class ConvNextVisionTower(BaseVisionTower):
     def __init__(self, vision_tower, args, delay_load=False):
-        super().__init__()
+        super().__init__(vision_tower, args, delay_load)
 
-        self.is_loaded = False
-        self.args = args
-        
-        self.vision_tower_name = vision_tower
         self.select_layer = args.mm_vision_select_layer
-        self.freeze_vision = args.freeze_vision_tower
 
         self.input_image_size = args.input_image_size
 
@@ -27,22 +23,10 @@ class ConvNextVisionTower(nn.Module):
             log_already_loaded(self.vision_tower_name)
             return
         
-        # self.image_processor = CLIPImageProcessor(
-        #     crop_size={
-        #         "height": self.input_image_size, 
-        #         "width": self.input_image_size
-        #         },
-        #     size={
-        #         'shortest_edge': self.input_image_size
-        #         },
-        #     image_mean=[0.48145466, 0.4578275, 0.40821073],
-        #     image_std=[0.26862954, 0.26130258, 0.27577711],)
         self.image_processor = load_clip_image_processor(self.args)
         self.vision_tower = convnext_xxlarge(self.vision_tower_name)
-        # self.vision_tower  = timm.create_model(self.vision_tower_name, pretrained=True)
 
-        if self.freeze_vision:
-            self.vision_tower.requires_grad_(False)
+        self._freeze_if_needed()
 
         for s in self.vision_tower.stages:
             s.grad_checkpointing = True
@@ -69,25 +53,11 @@ class ConvNextVisionTower(nn.Module):
         image_forward_outs = self.forward_features(images.to(device=self.device, dtype=self.dtype))
         image_features = self.feature_select(image_forward_outs).to(images.dtype)
 
-        # print("image_features: ", image_features.shape)
         return image_features
 
     @property
-    def dummy_feature(self):
-        return torch.zeros(1, self.hidden_size, device=self.device, dtype=self.dtype)
-
-    @property
-    def dtype(self):
-        return next(self.vision_tower.parameters()).dtype
-
-    @property
-    def device(self):
-        return next(self.vision_tower.parameters()).device
-
-    @property
     def config(self):
-        assert  NotImplementedError
-        pass
+        raise NotImplementedError("ConvNeXt config property not implemented")
 
     @property
     def num_attention_heads(self):
@@ -111,4 +81,4 @@ class ConvNextVisionTower(nn.Module):
 
     @property
     def num_patches(self):
-        return (cfg['image_size'] // self.patch_embed.patch_size[0]) ** 2
+        raise NotImplementedError("ConvNeXt num_patches not implemented")

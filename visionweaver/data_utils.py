@@ -464,8 +464,6 @@ def preprocess_qwen(
             else:
                 target += encode_id
 
-        # print(tokenizer.decode(input_id))
-
         assert len(input_id) == len(target), f"{len(input_id)} != {len(target)}"
         # rank0_print("input_id:", ''.join(tokenizer.batch_decode(input_id)))
         for idx, encode_id in enumerate(input_id):
@@ -556,8 +554,6 @@ def preprocess_llama3(
                 target += [constants.IGNORE_INDEX] * len(encode_id)
             else:
                 target += encode_id
-
-        # print(tokenizer.decode(input_id))
 
         assert len(input_id) == len(target), f"{len(input_id)} != {len(target)}"
         for idx, encode_id in enumerate(input_id):
@@ -715,7 +711,8 @@ class LazySupervisedDataset(Dataset):
         sources = self.list_data_dict[i]
         if isinstance(i, int):
             sources = [sources]
-        assert len(sources) == 1, "Don't know why it is wrapped to a list"  # FIXME
+        # Single sample wrapped in list for uniform processing
+        assert len(sources) == 1
         if "image" in sources[0]:
             image_file = self.list_data_dict[i]["image"]
             image_folder = self.data_args.image_folder
@@ -802,7 +799,6 @@ class DataCollatorForSupervisedDataset(object):
         ]
         labels = [_labels[: self.tokenizer.model_max_length] for _labels in labels]
         if self.tokenizer.pad_token_id is None:
-            # self.tokenizer.pad_token_id = self.tokenizer.eos_token_id  # FIXME: this could only be triggered for llama3 model.
             self.tokenizer.pad_token_id = (
                 0  # This gets the best result. Don't know why.
             )

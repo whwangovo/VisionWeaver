@@ -121,13 +121,12 @@ class Conversation:
             chat_template_messages = [{"role": "system", "content": self.system}]
             for role, message in messages:
                 if message:
-                    # TODO: why?
+                    # Messages with images are stored as (text, images) tuples
                     if type(message) is tuple:
                         message, images = message
                         message = constants.DEFAULT_IMAGE_TOKEN * len(images) + message
                     chat_template_messages.append({"role": role, "content": message})
 
-            # print(chat_template_messages)
             return tokenizer.apply_chat_template(chat_template_messages, tokenize=False, add_generation_prompt=True)
             # ret = "" if self.system == "" else self.system + self.sep + "\n"
             # for role, message in messages:

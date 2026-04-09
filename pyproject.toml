@@ -63,6 +63,7 @@ standalone = [
 ]
 
 build = ["build", "twine"]
+test = ["pytest>=8.0"]
 
 [tool.setuptools.packages.find]
 exclude = ["assets*", "benchmark*", "docs", "dist*", "playground*", "scripts*", "tests*"]
@@ -86,3 +87,6 @@ standalone = { features = ["standalone"], solve-group = "default" }
 
 [tool.pixi.dependencies]
 python = "3.12.*"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

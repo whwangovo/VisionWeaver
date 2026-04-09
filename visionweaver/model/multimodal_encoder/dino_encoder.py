@@ -2,25 +2,18 @@ import torch
 import torch.nn as nn
 from transformers import CLIPVisionConfig, Dinov2Model
 
+from .base_encoder import BaseVisionTower
 from .utils import load_clip_image_processor, log_already_loaded, require_config_value
 
 
-class DINOVisionTower(nn.Module):
+class DINOVisionTower(BaseVisionTower):
     def __init__(self, vision_tower, args, delay_load=False):
-        super().__init__()
+        super().__init__(vision_tower, args, delay_load)
 
-
-        self.is_loaded = False
-        self.args = args
-
-        self.vision_tower_name = vision_tower
         self.select_layer = args.mm_vision_select_layer
         self.select_feature = args.mm_vision_select_feature
-        self.freeze_vision = args.freeze_vision_tower
 
         self.input_image_size = args.input_image_size
-
-        #self.load_model()
 
         if not delay_load:
             self.load_model()
@@ -35,20 +28,13 @@ class DINOVisionTower(nn.Module):
         self.image_processor = load_clip_image_processor(self.args)
         self.vision_tower = Dinov2Model.from_pretrained(self.vision_tower_name)
 
-        if self.freeze_vision:
-            self.vision_tower.requires_grad_(False)
+        self._freeze_if_needed()
 
         self.is_loaded = True
 
     def feature_select(self, image_forward_outs):
         image_features = image_forward_outs.hidden_states[self.select_layer]
         image_features = image_features[:, 1:]
-        # if self.select_feature == 'patch':
-        #     image_features = image_features[:, 1:]
-        # elif self.select_feature == 'cls_patch':
-        #     image_features = image_features
-        # else:
-        #     raise ValueError(f'Unexpected select feature: {self.select_feature}')
         return image_features
 
     @torch.no_grad()
@@ -60,15 +46,10 @@ class DINOVisionTower(nn.Module):
                 image_feature = self.feature_select(image_forward_out).to(image.dtype)
                 image_features.append(image_feature)
         else:
-            # image_forward_outs_1 = self.vision_tower_1.forward_features(images.to(device=self.device, dtype=self.dtype))
             image_forward_outs = self.vision_tower(images.to(device=self.device, dtype=self.dtype), output_hidden_states=True)
             image_features = self.feature_select(image_forward_outs).to(images.dtype)
 
         return image_features
-
-    @property
-    def dummy_feature(self):
-        return torch.zeros(1, self.hidden_size, device=self.device, dtype=self.dtype)
 
     @property
     def dtype(self):
@@ -87,7 +68,6 @@ class DINOVisionTower(nn.Module):
 
     @property
     def hidden_size(self):
-        #return self.config.hidden_size
         return self.config.hidden_size
 
     @property

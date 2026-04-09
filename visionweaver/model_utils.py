@@ -76,7 +76,6 @@ def find_all_linear_names(model):
     ]
     for name, module in model.named_modules():
         if any(mm_keyword in name for mm_keyword in multimodal_keywords):
-            # print(f"continue, {name}")
             continue
         if isinstance(module, cls):
             names = name.split(".")

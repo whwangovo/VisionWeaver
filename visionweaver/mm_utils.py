@@ -217,7 +217,6 @@ def tokenizer_image_token(
 
     def insert_separator(X, sep):
         # it = [ele for sublist in zip(X, [sep] * len(X)) for ele in sublist][:-1]
-        # print(it)
         return [ele for sublist in zip(X, [sep] * len(X)) for ele in sublist][:-1]
 
     input_ids = []

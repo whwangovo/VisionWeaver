@@ -2,19 +2,16 @@ import torch
 import torch.nn as nn
 from transformers import CLIPImageProcessor, CLIPVisionConfig, CLIPVisionModel
 
+from .base_encoder import BaseVisionTower
 from .utils import log_already_loaded
 
 
-class CLIPVisionTower(nn.Module):
+class CLIPVisionTower(BaseVisionTower):
     def __init__(self, vision_tower, args, delay_load=False):
-        super().__init__()
+        super().__init__(vision_tower, args, delay_load)
 
-        self.is_loaded = False
-
-        self.vision_tower_name = vision_tower
         self.select_layer = args.mm_vision_select_layer
         self.select_feature = args.mm_vision_select_feature
-        self.freeze_vision = args.freeze_vision_tower
 
         if not delay_load:
             self.load_model()
@@ -31,8 +28,7 @@ class CLIPVisionTower(nn.Module):
         self.image_processor = CLIPImageProcessor.from_pretrained(self.vision_tower_name)
         self.vision_tower = CLIPVisionModel.from_pretrained(self.vision_tower_name, device_map=device_map)
         
-        if self.freeze_vision:
-            self.vision_tower.requires_grad_(False)
+        self._freeze_if_needed()
 
         self.is_loaded = True
 
@@ -59,10 +55,6 @@ class CLIPVisionTower(nn.Module):
             image_features = self.feature_select(image_forward_outs).to(images.dtype)
 
         return image_features
-
-    @property
-    def dummy_feature(self):
-        return torch.zeros(1, self.hidden_size, device=self.device, dtype=self.dtype)
 
     @property
     def dtype(self):

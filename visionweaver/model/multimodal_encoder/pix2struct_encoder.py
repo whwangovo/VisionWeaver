@@ -15,27 +15,22 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from transformers import (
     AutoProcessor,
     Pix2StructForConditionalGeneration,
 )
 
-from .utils import load_clip_image_processor, log_already_loaded, require_config_value
+from .base_encoder import BaseVisionTower
+from .utils import interpolate_pos_encoding, load_clip_image_processor, log_already_loaded, require_config_value
 
 
-class Pix2StructVisionTower(nn.Module):
+class Pix2StructVisionTower(BaseVisionTower):
     def __init__(self, vision_tower, args, delay_load=False):
-        super().__init__()
+        super().__init__(vision_tower, args, delay_load)
 
-        self.is_loaded = False
-        
-        self.args = args
-        self.vision_tower_name = vision_tower
         self.select_layer = args.mm_vision_select_layer
-        self.freeze_vision = args.freeze_vision_tower
-        
+
         self.input_image_size = args.input_image_size
 
         self.do_resize = args.do_resize
@@ -60,8 +55,7 @@ class Pix2StructVisionTower(nn.Module):
         self.pix2struct_processor = AutoProcessor.from_pretrained(self.vision_tower_name)
         self.pix2struct_processor.image_processor.is_vqa = False
 
-        if self.freeze_vision:
-            self.vision_tower.requires_grad_(False)
+        self._freeze_if_needed()
         
         self.image_mean = torch.tensor(self.image_processor.image_mean).view(1, 3, 1, 1)
         self.image_std = torch.tensor(self.image_processor.image_std).view(1, 3, 1, 1)
@@ -96,34 +90,9 @@ class Pix2StructVisionTower(nn.Module):
                 align_corners=True,
             ).to(dtype=image_features.dtype)
             
-        image_features = self.interpolate_pos_encoding(image_features)
+        image_features = interpolate_pos_encoding(image_features)
 
         return image_features
-
-    def interpolate_pos_encoding(self, image_features):
-        if len(image_features.shape) == 3:
-            b, n, c = image_features.shape
-            w = h = int(n ** 0.5)
-            image_features = image_features.transpose(1, 2).reshape(b, c, h, w)
-        else:
-            b, c, h, w = image_features.shape
-
-        # if w != self.input_image_tokens:
-        #     image_features = F.interpolate(image_features.float(), size=(self.num_grids, self.num_grids), mode='bilinear', align_corners=True)
-            
-        return image_features.flatten(2, 3).transpose(1, 2)
-
-    @property
-    def dummy_feature(self):
-        return torch.zeros(1, self.hidden_size, device=self.device, dtype=self.dtype)
-
-    @property
-    def dtype(self):
-        return next(self.vision_tower.parameters()).dtype
-
-    @property
-    def device(self):
-        return next(self.vision_tower.parameters()).device
 
     @property
     def config(self):

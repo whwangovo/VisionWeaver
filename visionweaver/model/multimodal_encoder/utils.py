@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+import math
+from typing import Optional
+
+import torch
+import torch.nn.functional as F
+
 
 def require_config_value(config, name: str):
     value = getattr(config, name, None)
@@ -17,3 +23,120 @@ def load_clip_image_processor(config):
 
 def log_already_loaded(vision_tower_name: str) -> None:
     print(f"{vision_tower_name} is already loaded, `load_model` called again, skipping.")
+
+
+def resample_pos_embed(
+    posemb,
+    new_size: int,
+    num_prefix_tokens: int = 1,
+    interpolation: str = "bicubic",
+    antialias: bool = True,
+    verbose: bool = False,
+):
+    new_size = [
+        int(math.sqrt(new_size - num_prefix_tokens)),
+        int(math.sqrt(new_size - num_prefix_tokens)),
+    ]
+    num_pos_tokens = posemb.shape[1] - num_prefix_tokens
+    old_size = int(math.sqrt(num_pos_tokens))
+    bs = posemb.shape[0]
+
+    if num_prefix_tokens:
+        posemb_prefix, posemb = posemb[:, :num_prefix_tokens], posemb[:, num_prefix_tokens:]
+    else:
+        posemb_prefix, posemb = None, posemb
+
+    embed_dim = posemb.shape[-1]
+    orig_dtype = posemb.dtype
+    posemb = posemb.float()  # interpolate needs float32
+    posemb = posemb.reshape(bs, old_size, old_size, -1).permute(0, 3, 1, 2)
+    posemb = F.interpolate(posemb, size=new_size, mode=interpolation, antialias=antialias)
+    posemb = posemb.permute(0, 2, 3, 1).reshape(bs, -1, embed_dim)
+    posemb = posemb.to(dtype=orig_dtype)
+
+    if posemb_prefix is not None:
+        posemb = torch.cat([posemb_prefix, posemb], 1)
+
+    if not torch.jit.is_scripting() and verbose:
+        print(f"Resized position embedding: {old_size} to {new_size}.")
+
+    return posemb
+
+
+def interpolate_pos_encoding(image_features):
+    """Reshape image features from (B, N, C) or (B, C, H, W) to (B, H*W, C)."""
+    if len(image_features.shape) == 3:
+        b, n, c = image_features.shape
+        w = h = int(n ** 0.5)
+        image_features = image_features.transpose(1, 2).reshape(b, c, h, w)
+    else:
+        b, c, h, w = image_features.shape
+
+    return image_features.flatten(2, 3).transpose(1, 2)
+
+
+def forward_patch_embeddings(self, pixel_values):
+    """Patched forward for SAM patch embeddings that allows variable input resolution."""
+    batch_size, num_channels, height, width = pixel_values.shape
+    if num_channels != self.num_channels:
+        raise ValueError(
+            "Make sure that the channel dimension of the pixel values match with the one set in the configuration."
+        )
+    embeddings = self.projection(pixel_values).permute(0, 2, 3, 1)
+    return embeddings
+
+
+def forward_sam_vision_encoder(
+    self,
+    pixel_values: Optional[torch.FloatTensor] = None,
+    output_attentions: Optional[bool] = None,
+    output_hidden_states: Optional[bool] = None,
+    return_dict: Optional[bool] = None,
+):
+    """Patched forward for SAM vision encoder with position embedding resampling."""
+    hidden_states = self.patch_embed(pixel_values)
+
+    b, h, w, c = hidden_states.shape
+    hidden_states = hidden_states.reshape(b, -1, c)
+    if self.pos_embed is not None:
+        pos_embed = resample_pos_embed(
+            self.pos_embed.flatten(1, 2), hidden_states.shape[1], num_prefix_tokens=0
+        )
+        hidden_states = hidden_states + pos_embed
+
+    hidden_states = hidden_states.reshape(b, h, w, c)
+    for i, layer_module in enumerate(self.layers):
+        if self.gradient_checkpointing and self.training:
+            layer_outputs = self._gradient_checkpointing_func(
+                layer_module.__call__,
+                hidden_states,
+            )
+        else:
+            layer_outputs = layer_module(hidden_states, output_attentions=output_attentions)
+
+        hidden_states = layer_outputs[0]
+
+    return hidden_states
+
+
+def forward_vary_vision_encoder(self, x: torch.Tensor) -> torch.Tensor:
+    """Patched forward for Vary vision encoder with position embedding resampling."""
+    x = self.patch_embed(x)
+    b, h, w, c = x.shape
+    x = x.reshape(b, -1, c)
+
+    if self.pos_embed is not None:
+        pos_embed = resample_pos_embed(
+            self.pos_embed.flatten(1, 2), x.shape[1], num_prefix_tokens=0
+        )
+        x = x + pos_embed
+    x = x.reshape(b, h, w, c)
+
+    for blk in self.blocks:
+        x = blk(x)
+
+    x = self.neck(x.permute(0, 3, 1, 2))
+    x = self.net_2(x)
+    x = self.net_3(x)
+
+    return x
